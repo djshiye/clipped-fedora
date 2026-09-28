@@ -21,6 +21,9 @@ mod imp {
         pub shortcut_bound: std::cell::Cell<bool>,
         pub background_setup: std::cell::Cell<bool>,
         pub tray: std::cell::RefCell<Option<ksni::Handle<crate::platform::tray::ClippedTray>>>,
+        pub tray_refresh_pending: std::cell::Cell<bool>,
+        /// PNG menu icons by content hash, so images are encoded once.
+        pub tray_icon_cache: std::cell::RefCell<std::collections::HashMap<[u8; 32], Vec<u8>>>,
         /// `None` until the first attempt; `Some(false)` when no tray host exists.
         pub tray_available: std::cell::Cell<Option<bool>>,
     }
@@ -288,6 +291,12 @@ impl ClippedApplication {
                 while let Ok(ev) = rx.recv().await {
                     match ev {
                         TrayEvent::Toggle => app.toggle_window(None),
+                        TrayEvent::Paste(hash) => {
+                            if let Some(w) = app.imp().window.get() {
+                                w.paste_from_tray(hash);
+                            }
+                        }
+                        TrayEvent::ClearHistory => app.confirm_clear_history(),
                         TrayEvent::Preferences => {
                             if let Some(w) = app.imp().window.get() {
                                 w.present();
@@ -317,8 +326,9 @@ impl ClippedApplication {
                     return;
                 }
                 let tx = tx.clone();
+                let items = app.tray_snapshot();
                 glib::spawn_future_local(async move {
-                    match crate::platform::tray::spawn(tx).await {
+                    match crate::platform::tray::spawn(tx, items).await {
                         Ok(handle) => {
                             app.imp().tray.replace(Some(handle));
                             app.imp().tray_available.set(Some(true));
@@ -337,6 +347,112 @@ impl ClippedApplication {
         s.connect_changed(Some(settings::SHOW_TRAY_ICON), move |s, key| {
             apply(s.boolean(key))
         });
+
+        // Keep the menu in sync with the history, coalescing bursts of changes.
+        if let Some(window) = self.imp().window.get() {
+            window
+                .history()
+                .set_on_change(std::rc::Rc::new(glib::clone!(
+                    #[weak(rename_to = app)]
+                    self,
+                    move || app.schedule_tray_refresh()
+                )));
+        }
+    }
+
+    fn schedule_tray_refresh(&self) {
+        if self.imp().tray_refresh_pending.replace(true) {
+            return;
+        }
+        glib::timeout_add_local_once(
+            std::time::Duration::from_millis(200),
+            glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move || {
+                    app.imp().tray_refresh_pending.set(false);
+                    let Some(handle) = app.imp().tray.borrow().clone() else {
+                        return;
+                    };
+                    let items = app.tray_snapshot();
+                    glib::spawn_future_local(async move {
+                        handle.update(|t| t.items = items).await;
+                    });
+                }
+            ),
+        );
+    }
+
+    /// The recent clips as plain data for the tray menu.
+    fn tray_snapshot(&self) -> Vec<crate::platform::tray::TrayItem> {
+        use crate::{model::ClipKind, platform::tray};
+        let Some(window) = self.imp().window.get() else {
+            return Vec::new();
+        };
+        let mut cache = self.imp().tray_icon_cache.borrow_mut();
+        let items: Vec<tray::TrayItem> = window
+            .history()
+            .recent(tray::MENU_ITEMS)
+            .iter()
+            .map(|item| {
+                let hash = item.hash();
+                let icon_png = if item.kind() == ClipKind::Image {
+                    item.image_path().and_then(|path| {
+                        if let Some(png) = cache.get(&hash) {
+                            return Some(png.clone());
+                        }
+                        let png = crate::model::images::menu_icon_png(&path, 48)?;
+                        cache.insert(hash, png.clone());
+                        Some(png)
+                    })
+                } else {
+                    None
+                };
+                tray::TrayItem {
+                    hash,
+                    label: tray::menu_label(&item.preview()),
+                    pinned: item.pinned(),
+                    icon_png,
+                }
+            })
+            .collect();
+        let keep: std::collections::HashSet<[u8; 32]> = items.iter().map(|i| i.hash).collect();
+        cache.retain(|h, _| keep.contains(h));
+        items
+    }
+
+    /// Ask before clearing everything (HIG: warn on irreversible loss).
+    pub fn confirm_clear_history(&self) {
+        let Some(window) = self.imp().window.get() else {
+            return;
+        };
+        window.present();
+        let dialog = adw::AlertDialog::builder()
+            .heading(crate::i18n::gettext("Clear Clipboard History?"))
+            .body(crate::i18n::gettext(
+                "All entries, including pinned items, will be permanently deleted.",
+            ))
+            .default_response("cancel")
+            .close_response("cancel")
+            .build();
+        dialog.add_responses(&[
+            ("cancel", &crate::i18n::gettext("_Cancel")),
+            ("clear", &crate::i18n::gettext("_Clear")),
+        ]);
+        dialog.set_response_appearance("clear", adw::ResponseAppearance::Destructive);
+        dialog.connect_response(
+            None,
+            glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move |_, response| {
+                    if response == "clear" {
+                        app.clear_history();
+                    }
+                }
+            ),
+        );
+        dialog.present(Some(window));
     }
 
     /// `Some(false)` means the desktop has no tray host.

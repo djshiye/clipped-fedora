@@ -60,3 +60,9 @@ fn thumbnail_of(full: &gdk_pixbuf::Pixbuf) -> gdk::Texture {
         .unwrap_or_else(|| full.clone());
     texture_from_pixbuf(&small)
 }
+
+/// A small PNG (for menu icons) rendered from the image file on disk.
+pub fn menu_icon_png(path: &str, size: i32) -> Option<Vec<u8>> {
+    let pb = gdk_pixbuf::Pixbuf::from_file_at_scale(path, size, size, true).ok()?;
+    pb.save_to_bufferv("png", &[]).ok()
+}

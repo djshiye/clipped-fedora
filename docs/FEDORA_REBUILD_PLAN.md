@@ -2,7 +2,7 @@
 
 Plan written 2026-09-28 against commit e7f1ddf. Target: Fedora 44 Workstation, GNOME 50, Wayland. Delivery: RPM.
 
-**Status (2026-09-28, end of day):** Phases 0–7 are implemented and verified on this machine; see `docs/SPIKES.md` for platform findings and `docs/PERF.md` for measurements. Not done: COPR publishing (needs the owner's API token), a Flatpak, and translations beyond the English source strings. The status icon was added on request (on by default, only registers when a tray host exists).
+**Status (2026-09-28, end of day):** Phases 0–7 are implemented and verified on this machine; see `docs/SPIKES.md` for platform findings and `docs/PERF.md` for measurements. Not done: COPR publishing (needs the owner's API token), a Flatpak, and translations beyond the English source strings. The status icon was added on request (on by default, only registers when a tray host exists); its menu is the quick-access popup, listing the ten most recent clips with thumbnails, updated live, one click to paste. On Wayland an app cannot position a window next to the panel, so the tray host's own menu is the only anchored popup available, and it matches the macOS menu-bar pattern (Maccy, Paste).
 
 ---
 

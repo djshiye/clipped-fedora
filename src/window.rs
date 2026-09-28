@@ -634,6 +634,35 @@ impl ClippedWindow {
         dialog.present(Some(self));
     }
 
+    /// Paste (or copy) an item chosen from the tray menu; the window stays hidden.
+    pub fn paste_from_tray(&self, hash: [u8; 32]) {
+        let Some(item) = self.imp().history.find_by_hash(&hash) else {
+            return;
+        };
+        let Some(portal) = self.imp().portal.borrow().clone() else {
+            return;
+        };
+        let item = self.imp().history.add(item);
+        let paste = settings().boolean(settings::PASTE_ON_SELECT);
+        glib::spawn_future_local(async move {
+            let Some(offer) = offer_for(&item).await else {
+                return;
+            };
+            if let Err(e) = portal.offer(offer).await {
+                tracing::warn!("could not set clipboard: {e}");
+                return;
+            }
+            if paste {
+                // Let the panel menu close and focus settle first.
+                glib::timeout_future(std::time::Duration::from_millis(350)).await;
+                match portal.inject_paste().await {
+                    Ok(()) => tracing::info!("paste injected (tray)"),
+                    Err(e) => tracing::warn!("paste injection failed: {e}"),
+                }
+            }
+        });
+    }
+
     /// Hide, remembering the size (Escape and paste paths do not emit close-request).
     pub fn hide_window(&self) {
         let s = settings();

@@ -1,10 +1,7 @@
 use adw::{prelude::*, subclass::prelude::*};
 use gtk::{CompositeTemplate, glib};
 
-use crate::{
-    i18n::gettext,
-    settings::{self, settings},
-};
+use crate::settings::{self, settings};
 
 mod imp {
     use super::*;
@@ -79,29 +76,11 @@ impl Default for ClippedPreferences {
 }
 
 impl ClippedPreferences {
-    /// HIG: warn before irreversible loss that is not the obvious result of
-    /// the action; clearing everything qualifies.
     fn confirm_clear(&self) {
-        let dialog = adw::AlertDialog::builder()
-            .heading(gettext("Clear Clipboard History?"))
-            .body(gettext(
-                "All entries, including pinned items, will be permanently deleted.",
-            ))
-            .default_response("cancel")
-            .close_response("cancel")
-            .build();
-        dialog.add_responses(&[
-            ("cancel", &gettext("_Cancel")),
-            ("clear", &gettext("_Clear")),
-        ]);
-        dialog.set_response_appearance("clear", adw::ResponseAppearance::Destructive);
-        dialog.connect_response(None, |_, response| {
-            let app = gtk::gio::Application::default()
-                .and_then(|a| a.downcast::<crate::application::ClippedApplication>().ok());
-            if let (true, Some(app)) = (response == "clear", app) {
-                app.clear_history();
-            }
-        });
-        dialog.present(Some(self));
+        if let Some(app) = gtk::gio::Application::default()
+            .and_then(|a| a.downcast::<crate::application::ClippedApplication>().ok())
+        {
+            app.confirm_clear_history();
+        }
     }
 }

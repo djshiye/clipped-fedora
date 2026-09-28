@@ -11,6 +11,7 @@ pub struct HistoryStore {
     by_hash: RefCell<HashMap<[u8; 32], ClipItem>>,
     max_items: RefCell<u32>,
     storage: RefCell<Option<Storage>>,
+    on_change: RefCell<Option<std::rc::Rc<dyn Fn()>>>,
 }
 
 impl Default for HistoryStore {
@@ -26,7 +27,34 @@ impl HistoryStore {
             by_hash: RefCell::new(HashMap::new()),
             max_items: RefCell::new(max_items),
             storage: RefCell::new(None),
+            on_change: RefCell::new(None),
         }
+    }
+
+    /// Called after any change (add, move, remove, clear, trim, pin).
+    pub fn set_on_change(&self, f: std::rc::Rc<dyn Fn()>) {
+        self.on_change.replace(Some(f));
+    }
+
+    fn changed(&self) {
+        if let Some(f) = self.on_change.borrow().clone() {
+            f();
+        }
+    }
+
+    pub fn find_by_hash(&self, hash: &[u8; 32]) -> Option<ClipItem> {
+        self.by_hash.borrow().get(hash).cloned()
+    }
+
+    /// Pinned items first (newest first within each group), at most `n`.
+    pub fn recent(&self, n: usize) -> Vec<ClipItem> {
+        let all: Vec<ClipItem> = (0..self.model.n_items())
+            .filter_map(|i| self.model.item(i).and_downcast::<ClipItem>())
+            .collect();
+        let mut out: Vec<ClipItem> = all.iter().filter(|i| i.pinned()).cloned().collect();
+        out.extend(all.iter().filter(|i| !i.pinned()).cloned());
+        out.truncate(n);
+        out
     }
 
     /// Attach persistence. Items added afterwards are written through.
@@ -43,9 +71,13 @@ impl HistoryStore {
 
     fn watch_pinned(&self, item: &ClipItem) {
         let storage = self.storage.borrow().clone();
+        let on_change = self.on_change.borrow().clone();
         item.connect_pinned_notify(move |it| {
             if let Some(s) = &storage {
                 s.set_pinned(it.hash(), it.pinned());
+            }
+            if let Some(f) = &on_change {
+                f();
             }
         });
     }
@@ -83,6 +115,7 @@ impl HistoryStore {
             if let Some(s) = self.storage.borrow().as_ref() {
                 s.touch(hash, existing.timestamp());
             }
+            self.changed();
             return existing;
         }
         self.watch_pinned(&item);
@@ -96,6 +129,7 @@ impl HistoryStore {
             s.upsert(item.to_record(), png);
         }
         self.trim();
+        self.changed();
         item
     }
 
@@ -132,6 +166,7 @@ impl HistoryStore {
             // pruned when the database is next opened.
             s.remove(item.hash(), None);
         }
+        self.changed();
         Some(pos)
     }
 
@@ -143,6 +178,7 @@ impl HistoryStore {
         if let Some(s) = self.storage.borrow().as_ref() {
             s.upsert(item.to_record(), None);
         }
+        self.changed();
     }
 
     pub fn clear(&self) {
@@ -151,6 +187,7 @@ impl HistoryStore {
         if let Some(s) = self.storage.borrow().as_ref() {
             s.clear();
         }
+        self.changed();
     }
 
     pub fn set_max_items(&self, max: u32) {
