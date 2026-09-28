@@ -16,7 +16,7 @@ Complete rewrite in Rust with GTK 4 and libadwaita, targeting Fedora GNOME on Wa
 - Password-manager clipboard entries are skipped; clipboard content is never logged.
 - Adaptive layout: bottom tab bar on narrow windows, list plus preview pane above 700 px.
 - Card-based visual design on Adwaita tokens: rounded rows, tinted selection, pill search, hover-revealed controls.
-- Status icon (StatusNotifierItem) whose menu lists the ten most recent clips for one-click paste, with image thumbnails and pinned items first, plus Open, Clear History…, Preferences and Quit; shown when a tray host exists.
+- Status icon (StatusNotifierItem) whose menu lists the ten most recent clips for one-click paste, grouped into Pinned and Recent sections, with image thumbnails and file icons, plus Open, Clear History…, Preferences and Quit; shown when a tray host exists.
 - Packaged as an RPM with a spec, man page and AppStream metadata.
 
 ### Removed

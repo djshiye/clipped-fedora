@@ -100,7 +100,7 @@ impl ClipItem {
             .property("kind", ClipKind::Image)
             .property(
                 "preview",
-                crate::i18n::gettext("Image {w}×{h}")
+                crate::i18n::gettext("Image · {w} × {h}")
                     .replace("{w}", &width.to_string())
                     .replace("{h}", &height.to_string()),
             )

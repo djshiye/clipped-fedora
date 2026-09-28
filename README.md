@@ -48,7 +48,7 @@ shell extension, or on the app having focus.
 - **Symbol picker**: math, arrows, currency, punctuation, keyboard, geometric, Greek and more.
 - **Adaptive layout**: tabs at the bottom on a narrow window; list plus a live preview pane when the window is wider than 700 px.
 - **Runs in the background** and **starts at login** (Preferences › Run in Background).
-- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips (pinned first, thumbnails for images). One click pastes it into the app you're using, without opening the window. Below the clips: Open Clipped, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; the switch is greyed out where no tray exists.
+- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips, in a Pinned section and a Recent section, with thumbnails for images and a folder icon for files. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipped, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; the switch is greyed out where no tray exists.
 - **Privacy**: entries flagged by password managers are skipped, clipboard content is never logged, and the history file is private to your user.
 - Follows the system light/dark style and accent colour.
 

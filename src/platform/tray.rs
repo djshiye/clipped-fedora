@@ -20,10 +20,18 @@ pub enum TrayEvent {
     Quit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrayKind {
+    Text,
+    Image,
+    Files,
+}
+
 /// A snapshot of one history entry, safe to hand to the tray thread.
 #[derive(Debug, Clone)]
 pub struct TrayItem {
     pub hash: [u8; 32],
+    pub kind: TrayKind,
     pub label: String,
     pub pinned: bool,
     /// Small PNG for image entries.
@@ -80,39 +88,55 @@ impl Tray for ClippedTray {
     }
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
-        let mut menu: Vec<MenuItem<Self>> = Vec::with_capacity(self.items.len() + 6);
+        let mut menu: Vec<MenuItem<Self>> = Vec::with_capacity(self.items.len() + 8);
 
-        if self.items.is_empty() {
-            menu.push(
-                StandardItem {
-                    label: gettext("No clips yet"),
-                    enabled: false,
-                    ..Default::default()
-                }
-                .into(),
-            );
-        }
-        for item in &self.items {
+        let header = |label: String| -> MenuItem<Self> {
+            StandardItem {
+                label,
+                enabled: false,
+                ..Default::default()
+            }
+            .into()
+        };
+        let clip = |item: &TrayItem| -> MenuItem<Self> {
             let hash = item.hash;
-            menu.push(
-                StandardItem {
-                    label: item.label.clone(),
-                    icon_name: if item.pinned && item.icon_png.is_none() {
-                        "view-pin-symbolic".into()
-                    } else {
-                        String::new()
-                    },
-                    icon_data: item.icon_png.clone().unwrap_or_default(),
-                    activate: Box::new(move |t: &mut Self| t.send(TrayEvent::Paste(hash))),
-                    ..Default::default()
-                }
-                .into(),
-            );
+            let icon_name = match (item.icon_png.is_some(), item.kind, item.pinned) {
+                (true, _, _) => String::new(),
+                (false, _, true) => "view-pin-symbolic".into(),
+                (false, TrayKind::Files, false) => "folder-symbolic".into(),
+                (false, TrayKind::Image, false) => "image-x-generic-symbolic".into(),
+                (false, TrayKind::Text, false) => String::new(),
+            };
+            StandardItem {
+                label: item.label.clone(),
+                icon_name,
+                icon_data: item.icon_png.clone().unwrap_or_default(),
+                activate: Box::new(move |t: &mut Self| t.send(TrayEvent::Paste(hash))),
+                ..Default::default()
+            }
+            .into()
+        };
+
+        let (pinned, recent): (Vec<&TrayItem>, Vec<&TrayItem>) =
+            self.items.iter().partition(|i| i.pinned);
+        if self.items.is_empty() {
+            menu.push(header(gettext("No clips yet. Copy something.")));
         }
+        if !pinned.is_empty() {
+            menu.push(header(gettext("Pinned")));
+            menu.extend(pinned.iter().map(|i| clip(i)));
+            if !recent.is_empty() {
+                menu.push(MenuItem::Separator);
+                menu.push(header(gettext("Recent")));
+            }
+        }
+        menu.extend(recent.iter().map(|i| clip(i)));
+
         menu.push(MenuItem::Separator);
         menu.push(
             StandardItem {
                 label: gettext("Open Clipped"),
+                icon_name: "edit-paste-symbolic".into(),
                 shortcut: vec![vec!["Super".into(), "Shift".into(), "v".into()]],
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::Toggle)),
                 ..Default::default()
@@ -122,6 +146,7 @@ impl Tray for ClippedTray {
         menu.push(
             StandardItem {
                 label: gettext("Clear History…"),
+                icon_name: "edit-clear-all-symbolic".into(),
                 enabled: !self.items.is_empty(),
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::ClearHistory)),
                 ..Default::default()
@@ -132,6 +157,7 @@ impl Tray for ClippedTray {
         menu.push(
             StandardItem {
                 label: gettext("Preferences"),
+                icon_name: "emblem-system-symbolic".into(),
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::Preferences)),
                 ..Default::default()
             }
@@ -140,6 +166,7 @@ impl Tray for ClippedTray {
         menu.push(
             StandardItem {
                 label: gettext("Quit"),
+                icon_name: "application-exit-symbolic".into(),
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::Quit)),
                 ..Default::default()
             }

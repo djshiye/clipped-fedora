@@ -410,6 +410,11 @@ impl ClippedApplication {
                 };
                 tray::TrayItem {
                     hash,
+                    kind: match item.kind() {
+                        ClipKind::Image => tray::TrayKind::Image,
+                        ClipKind::Files => tray::TrayKind::Files,
+                        ClipKind::Text => tray::TrayKind::Text,
+                    },
                     label: tray::menu_label(&item.preview()),
                     pinned: item.pinned(),
                     icon_png,
