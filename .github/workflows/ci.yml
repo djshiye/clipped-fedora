@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  fedora:
+    name: Build and test (Fedora ${{ matrix.release }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["44", "rawhide"]
+    container:
+      image: fedora:${{ matrix.release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y rust cargo clippy rustfmt meson ninja-build gcc \
+            gtk4-devel libadwaita-devel sqlite-devel blueprint-compiler \
+            desktop-file-utils appstream gettext rpm-build rpmdevtools rpmlint \
+            cargo-rpm-macros python3 tar xz
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Unit tests
+        run: cargo test
+
+      - name: Meson build and validation tests
+        run: |
+          meson setup builddir
+          meson compile -C builddir
+          meson test -C builddir --print-errorlogs
+          DESTDIR="$PWD/stage" meson install -C builddir
+
+      - name: Build RPM
+        run: |
+          VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          cargo vendor --locked vendor > /dev/null
+          tar -cJf "clipped-${VERSION}-vendor.tar.xz" vendor
+          tar --no-wildcards-match-slash --exclude=./target --exclude=./builddir --exclude=./stage \
+              --exclude=./vendor --exclude=./.git --exclude=./spikes --exclude='./*.tar.*' \
+              --transform "s,^\./,clipped-${VERSION}/," -czf "clipped-${VERSION}.tar.gz" .
+          rpmdev-setuptree
+          cp clipped-${VERSION}*.tar.* ~/rpmbuild/SOURCES/
+          rpmbuild -ba build-aux/clipped.spec
+          rpmlint build-aux/clipped.spec ~/rpmbuild/RPMS/x86_64/clipped-*.rpm
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipped-rpm-fedora-${{ matrix.release }}
+          path: ~/rpmbuild/RPMS/x86_64/clipped-*.rpm
+          if-no-files-found: error
