@@ -44,13 +44,16 @@ jobs:
       - name: Build RPM
         run: |
           VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          cargo vendor --locked vendor > /dev/null
-          tar -cJf "clipped-${VERSION}-vendor.tar.xz" vendor
-          tar --no-wildcards-match-slash --exclude=./target --exclude=./builddir --exclude=./stage \
-              --exclude=./vendor --exclude=./.git --exclude=./spikes --exclude='./*.tar.*' \
-              --transform "s,^\./,clipped-${VERSION}/," -czf "clipped-${VERSION}.tar.gz" .
+          # Build everything outside the checkout: tar refuses to archive a
+          # directory that changes while it is read (its own output landing in it).
+          DIST="$RUNNER_TEMP/dist"; mkdir -p "$DIST"
+          cargo vendor --locked "$DIST/vendor" > /dev/null
+          tar -C "$DIST" -cJf "$DIST/clipped-${VERSION}-vendor.tar.xz" vendor
+          tar --no-wildcards-match-slash \
+              --exclude=./target --exclude=./builddir --exclude=./stage --exclude=./.git --exclude=./spikes \
+              --transform "s,^\./,clipped-${VERSION}/," -czf "$DIST/clipped-${VERSION}.tar.gz" .
           rpmdev-setuptree
-          cp clipped-${VERSION}*.tar.* ~/rpmbuild/SOURCES/
+          cp "$DIST"/clipped-${VERSION}*.tar.* ~/rpmbuild/SOURCES/
           rpmbuild -ba build-aux/clipped.spec
           rpmlint build-aux/clipped.spec ~/rpmbuild/RPMS/x86_64/clipped-*.rpm
 
