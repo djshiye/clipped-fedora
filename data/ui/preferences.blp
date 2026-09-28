@@ -1,0 +1,64 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ClippedPreferences : Adw.PreferencesDialog {
+  title: _("Preferences");
+  content-width: 440;
+
+  Adw.PreferencesPage {
+    Adw.PreferencesGroup {
+      title: _("Shortcut");
+
+      Adw.ActionRow shortcut_row {
+        title: _("Open Clipped");
+        subtitle: _("Super+Shift+V");
+        subtitle-selectable: false;
+
+        [suffix]
+        Label {
+          label: _("Change it in Settings › Keyboard");
+          styles ["dim-label", "caption"]
+        }
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("History");
+
+      Adw.SpinRow max_history_row {
+        title: _("Maximum Entries");
+        subtitle: _("Pinned items are always kept");
+        adjustment: Adjustment {
+          lower: 10;
+          upper: 1000;
+          step-increment: 10;
+          page-increment: 50;
+        };
+      }
+
+      Adw.SwitchRow paste_on_select_row {
+        title: _("Paste on Select");
+        subtitle: _("Selecting an item pastes it into the previous app");
+      }
+
+      Adw.ButtonRow clear_row {
+        title: _("Clear History…");
+        styles ["destructive-action"]
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Startup");
+
+      Adw.SwitchRow background_row {
+        title: _("Run in Background");
+        subtitle: _("Start at login and keep recording while the window is closed");
+      }
+
+      Adw.SwitchRow tray_row {
+        title: _("Show Status Icon");
+        subtitle: _("In the panel, when the desktop provides a tray");
+      }
+    }
+  }
+}

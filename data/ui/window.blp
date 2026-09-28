@@ -1,0 +1,245 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ClippedWindow : Adw.ApplicationWindow {
+  title: _("Clipped");
+  default-width: 380;
+  default-height: 560;
+  width-request: 320;
+  height-request: 420;
+  hide-on-close: true;
+
+  Adw.Breakpoint {
+    condition ("max-width: 450sp")
+    setters {
+      header_bar.title-widget: null;
+      switcher_bar.reveal: true;
+    }
+  }
+
+  Adw.Breakpoint {
+    condition ("min-width: 700sp")
+    setters {
+      preview_pane.visible: true;
+      list_column.hexpand: false;
+      list_column.width-request: 380;
+    }
+  }
+
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar header_bar {
+      title-widget: Adw.ViewSwitcher {
+        stack: stack;
+        policy: wide;
+      };
+
+      [end]
+      MenuButton {
+        icon-name: "open-menu-symbolic";
+        menu-model: primary_menu;
+        primary: true;
+        tooltip-text: _("Main Menu");
+      }
+    }
+
+    content: Adw.ViewStack stack {
+      Adw.ViewStackPage {
+        name: "history";
+        title: _("History");
+        icon-name: "edit-paste-symbolic";
+
+        child: Box {
+          orientation: horizontal;
+
+          Box list_column {
+            orientation: vertical;
+            hexpand: true;
+
+          SearchEntry search_entry {
+            placeholder-text: _("Search history");
+            margin-start: 12;
+            margin-end: 12;
+            margin-top: 4;
+            margin-bottom: 10;
+          }
+
+          Stack history_stack {
+            transition-type: crossfade;
+            transition-duration: 150;
+            vexpand: true;
+
+            StackPage {
+              name: "empty";
+
+              child: Adw.StatusPage {
+                icon-name: "edit-paste-symbolic";
+                title: _("No Clipboard History");
+                description: _("Text and images you copy will appear here.");
+              };
+            }
+
+            StackPage {
+              name: "no-results";
+
+              child: Adw.StatusPage {
+                icon-name: "system-search-symbolic";
+                title: _("No Results");
+              };
+            }
+
+            StackPage {
+              name: "permission";
+
+              child: Adw.StatusPage permission_page {
+                icon-name: "dialog-password-symbolic";
+                title: _("Clipboard Access Needed");
+                description: _("To record what you copy while it runs in the background, Clipped needs GNOME's remote desktop permission. GNOME will ask you to share; nothing leaves your computer and you only need to do this once.");
+
+                child: Button grant_button {
+                  label: _("Grant Access");
+                  halign: center;
+                  styles ["pill", "suggested-action"]
+                };
+              };
+            }
+
+            StackPage {
+              name: "list";
+
+              child: ScrolledWindow {
+                hscrollbar-policy: never;
+
+                child: ListView history_list {
+                  single-click-activate: true;
+                  styles ["clip-list"]
+                };
+              };
+            }
+          }
+          }
+
+          Separator {
+            orientation: vertical;
+            visible: bind preview_pane.visible;
+          }
+
+          Box preview_pane {
+            orientation: vertical;
+            visible: false;
+            width-request: 300;
+            hexpand: true;
+            styles ["preview-pane"]
+
+            Stack preview_stack {
+              vexpand: true;
+              transition-type: crossfade;
+              transition-duration: 150;
+              margin-start: 12;
+              margin-end: 12;
+              margin-top: 4;
+              styles ["preview-card"]
+
+              StackPage {
+                name: "none";
+
+                child: Adw.StatusPage {
+                  icon-name: "edit-select-all-symbolic";
+                  title: _("Nothing Selected");
+                  styles ["compact"]
+                };
+              }
+
+              StackPage {
+                name: "text";
+
+                child: ScrolledWindow {
+                  hscrollbar-policy: never;
+
+                  child: Label preview_text {
+                    xalign: 0;
+                    yalign: 0;
+                    wrap: true;
+                    wrap-mode: word_char;
+                    selectable: true;
+                    margin-start: 16;
+                    margin-end: 16;
+                    margin-top: 12;
+                    margin-bottom: 12;
+                  };
+                };
+              }
+
+              StackPage {
+                name: "image";
+
+                child: Picture preview_picture {
+                  content-fit: contain;
+                  can-shrink: true;
+                  hexpand: true;
+                  vexpand: true;
+                  margin-start: 12;
+                  margin-end: 12;
+                  margin-top: 12;
+                  margin-bottom: 12;
+                };
+              }
+            }
+
+            Label preview_meta {
+              xalign: 0;
+              ellipsize: end;
+              margin-start: 16;
+              margin-end: 16;
+              margin-top: 6;
+              margin-bottom: 8;
+              styles ["dim-label", "caption"]
+            }
+          }
+        };
+      }
+
+      Adw.ViewStackPage {
+        name: "emoji";
+        title: _("Emoji");
+        icon-name: "face-smile-symbolic";
+
+        child: Adw.Bin emoji_bin {};
+      }
+
+      Adw.ViewStackPage {
+        name: "symbols";
+        title: _("Symbols");
+        icon-name: "font-x-generic-symbolic";
+
+        child: Adw.Bin symbols_bin {};
+      }
+    };
+
+    [bottom]
+    Adw.ViewSwitcherBar switcher_bar {
+      stack: stack;
+    }
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_Preferences");
+      action: "app.preferences";
+    }
+
+    item {
+      label: _("_Keyboard Shortcuts");
+      action: "app.shortcuts";
+    }
+
+    item {
+      label: _("_About Clipped");
+      action: "app.about";
+    }
+  }
+}

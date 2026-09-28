@@ -1,0 +1,707 @@
+[
+ {
+  "glyph": "±",
+  "name": "plus minus",
+  "group": "Math"
+ },
+ {
+  "glyph": "×",
+  "name": "multiply times",
+  "group": "Math"
+ },
+ {
+  "glyph": "÷",
+  "name": "divide",
+  "group": "Math"
+ },
+ {
+  "glyph": "∞",
+  "name": "infinity",
+  "group": "Math"
+ },
+ {
+  "glyph": "∑",
+  "name": "sum sigma",
+  "group": "Math"
+ },
+ {
+  "glyph": "∏",
+  "name": "product",
+  "group": "Math"
+ },
+ {
+  "glyph": "∫",
+  "name": "integral",
+  "group": "Math"
+ },
+ {
+  "glyph": "∂",
+  "name": "partial derivative",
+  "group": "Math"
+ },
+ {
+  "glyph": "√",
+  "name": "square root",
+  "group": "Math"
+ },
+ {
+  "glyph": "π",
+  "name": "pi math",
+  "group": "Math"
+ },
+ {
+  "glyph": "∆",
+  "name": "delta change",
+  "group": "Math"
+ },
+ {
+  "glyph": "∇",
+  "name": "nabla",
+  "group": "Math"
+ },
+ {
+  "glyph": "∀",
+  "name": "for all",
+  "group": "Math"
+ },
+ {
+  "glyph": "∃",
+  "name": "exists",
+  "group": "Math"
+ },
+ {
+  "glyph": "∈",
+  "name": "element of in",
+  "group": "Math"
+ },
+ {
+  "glyph": "∉",
+  "name": "not element",
+  "group": "Math"
+ },
+ {
+  "glyph": "⊂",
+  "name": "subset",
+  "group": "Math"
+ },
+ {
+  "glyph": "⊃",
+  "name": "superset",
+  "group": "Math"
+ },
+ {
+  "glyph": "∪",
+  "name": "union",
+  "group": "Math"
+ },
+ {
+  "glyph": "∩",
+  "name": "intersection",
+  "group": "Math"
+ },
+ {
+  "glyph": "≈",
+  "name": "approximately",
+  "group": "Math"
+ },
+ {
+  "glyph": "≠",
+  "name": "not equal",
+  "group": "Math"
+ },
+ {
+  "glyph": "≤",
+  "name": "less equal",
+  "group": "Math"
+ },
+ {
+  "glyph": "≥",
+  "name": "greater equal",
+  "group": "Math"
+ },
+ {
+  "glyph": "≡",
+  "name": "identical",
+  "group": "Math"
+ },
+ {
+  "glyph": "∅",
+  "name": "empty set",
+  "group": "Math"
+ },
+ {
+  "glyph": "∝",
+  "name": "proportional",
+  "group": "Math"
+ },
+ {
+  "glyph": "ℕ",
+  "name": "natural numbers",
+  "group": "Math"
+ },
+ {
+  "glyph": "ℤ",
+  "name": "integers",
+  "group": "Math"
+ },
+ {
+  "glyph": "ℝ",
+  "name": "real numbers",
+  "group": "Math"
+ },
+ {
+  "glyph": "ℂ",
+  "name": "complex",
+  "group": "Math"
+ },
+ {
+  "glyph": "→",
+  "name": "right arrow",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "←",
+  "name": "left arrow",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↑",
+  "name": "up arrow",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↓",
+  "name": "down arrow",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↔",
+  "name": "left right",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↕",
+  "name": "up down",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↗",
+  "name": "northeast",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↘",
+  "name": "southeast",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↙",
+  "name": "southwest",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↖",
+  "name": "northwest",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⇒",
+  "name": "implies double right",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⇐",
+  "name": "double left",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⇔",
+  "name": "iff double",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⇑",
+  "name": "double up",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⇓",
+  "name": "double down",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "➡",
+  "name": "right solid",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⬅",
+  "name": "left solid",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⬆",
+  "name": "up solid",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "⬇",
+  "name": "down solid",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↩",
+  "name": "return hook",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↪",
+  "name": "right hook",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↺",
+  "name": "counterclockwise",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "↻",
+  "name": "clockwise",
+  "group": "Arrows"
+ },
+ {
+  "glyph": "€",
+  "name": "euro",
+  "group": "Currency"
+ },
+ {
+  "glyph": "£",
+  "name": "pound sterling",
+  "group": "Currency"
+ },
+ {
+  "glyph": "¥",
+  "name": "yen yuan",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₹",
+  "name": "rupee",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₿",
+  "name": "bitcoin crypto",
+  "group": "Currency"
+ },
+ {
+  "glyph": "$",
+  "name": "dollar",
+  "group": "Currency"
+ },
+ {
+  "glyph": "¢",
+  "name": "cent",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₩",
+  "name": "won korean",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₽",
+  "name": "ruble",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₺",
+  "name": "lira",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₫",
+  "name": "dong",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₱",
+  "name": "peso",
+  "group": "Currency"
+ },
+ {
+  "glyph": "₪",
+  "name": "shekel",
+  "group": "Currency"
+ },
+ {
+  "glyph": "©",
+  "name": "copyright",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "®",
+  "name": "registered",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "™",
+  "name": "trademark",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "°",
+  "name": "degree",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "§",
+  "name": "section",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "¶",
+  "name": "paragraph",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "†",
+  "name": "dagger",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "•",
+  "name": "bullet",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "…",
+  "name": "ellipsis",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "—",
+  "name": "em dash",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "–",
+  "name": "en dash",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "¡",
+  "name": "inverted exclamation",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "¿",
+  "name": "inverted question",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "¬",
+  "name": "not",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "«",
+  "name": "guillemet left",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "»",
+  "name": "guillemet right",
+  "group": "Punctuation"
+ },
+ {
+  "glyph": "⌘",
+  "name": "command apple",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "⌥",
+  "name": "option alt",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "⇧",
+  "name": "shift",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "⌫",
+  "name": "backspace delete",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "↵",
+  "name": "return enter",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "⇥",
+  "name": "tab",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "⎋",
+  "name": "escape esc",
+  "group": "Keyboard"
+ },
+ {
+  "glyph": "●",
+  "name": "filled circle",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "○",
+  "name": "white circle",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "■",
+  "name": "filled square",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "□",
+  "name": "white square",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "▲",
+  "name": "triangle up",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "▼",
+  "name": "triangle down",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "◆",
+  "name": "diamond filled",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "◇",
+  "name": "diamond",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "★",
+  "name": "star filled",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "☆",
+  "name": "star outline",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "♦",
+  "name": "diamond suit",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "♣",
+  "name": "club suit",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "♠",
+  "name": "spade suit",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "♥",
+  "name": "heart suit",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "✓",
+  "name": "check tick",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "✗",
+  "name": "cross wrong",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "☑",
+  "name": "checkbox checked",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "☐",
+  "name": "checkbox empty",
+  "group": "Geometric"
+ },
+ {
+  "glyph": "α",
+  "name": "alpha",
+  "group": "Greek"
+ },
+ {
+  "glyph": "β",
+  "name": "beta",
+  "group": "Greek"
+ },
+ {
+  "glyph": "γ",
+  "name": "gamma",
+  "group": "Greek"
+ },
+ {
+  "glyph": "δ",
+  "name": "delta",
+  "group": "Greek"
+ },
+ {
+  "glyph": "ε",
+  "name": "epsilon",
+  "group": "Greek"
+ },
+ {
+  "glyph": "θ",
+  "name": "theta",
+  "group": "Greek"
+ },
+ {
+  "glyph": "λ",
+  "name": "lambda",
+  "group": "Greek"
+ },
+ {
+  "glyph": "μ",
+  "name": "mu micro",
+  "group": "Greek"
+ },
+ {
+  "glyph": "π",
+  "name": "pi",
+  "group": "Greek"
+ },
+ {
+  "glyph": "σ",
+  "name": "sigma",
+  "group": "Greek"
+ },
+ {
+  "glyph": "τ",
+  "name": "tau",
+  "group": "Greek"
+ },
+ {
+  "glyph": "φ",
+  "name": "phi",
+  "group": "Greek"
+ },
+ {
+  "glyph": "ω",
+  "name": "omega",
+  "group": "Greek"
+ },
+ {
+  "glyph": "Ω",
+  "name": "omega uppercase",
+  "group": "Greek"
+ },
+ {
+  "glyph": "Σ",
+  "name": "sigma sum",
+  "group": "Greek"
+ },
+ {
+  "glyph": "Δ",
+  "name": "delta uppercase",
+  "group": "Greek"
+ },
+ {
+  "glyph": "Π",
+  "name": "pi product",
+  "group": "Greek"
+ },
+ {
+  "glyph": "Λ",
+  "name": "lambda uppercase",
+  "group": "Greek"
+ },
+ {
+  "glyph": "♻",
+  "name": "recycle",
+  "group": "Misc"
+ },
+ {
+  "glyph": "⚠",
+  "name": "warning",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☯",
+  "name": "yin yang",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☮",
+  "name": "peace",
+  "group": "Misc"
+ },
+ {
+  "glyph": "♪",
+  "name": "music note",
+  "group": "Misc"
+ },
+ {
+  "glyph": "♫",
+  "name": "music notes",
+  "group": "Misc"
+ },
+ {
+  "glyph": "♬",
+  "name": "music beamed",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☀",
+  "name": "sun",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☁",
+  "name": "cloud",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☂",
+  "name": "umbrella rain",
+  "group": "Misc"
+ },
+ {
+  "glyph": "❄",
+  "name": "snowflake",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☃",
+  "name": "snowman",
+  "group": "Misc"
+ },
+ {
+  "glyph": "✝",
+  "name": "cross",
+  "group": "Misc"
+ },
+ {
+  "glyph": "✡",
+  "name": "star of david",
+  "group": "Misc"
+ },
+ {
+  "glyph": "☪",
+  "name": "crescent star",
+  "group": "Misc"
+ }
+]

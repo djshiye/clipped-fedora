@@ -1,0 +1,40 @@
+[package]
+name = "clipped"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.92"
+license = "MIT"
+description = "Clipboard history manager for GNOME"
+repository = "https://github.com/djshiye/clipped-fedora"
+default-run = "clipped"
+
+[[bin]]
+name = "clipped"
+path = "src/main.rs"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["v4_22"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_9"] }
+ashpd = { version = "0.13", default-features = false, features = ["async-io", "clipboard", "remote_desktop", "screencast", "global_shortcuts", "background"] }
+futures-util = "0.3"
+async-io = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+blake3 = "1"
+rusqlite = "0.38"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+unicode-segmentation = "1"
+async-channel = "2"
+gettext-rs = { version = "0.7", features = ["gettext-system"] }
+ksni = { version = "0.3", default-features = false, features = ["async-io"] }
+
+[build-dependencies]
+glib-build-tools = "0.22"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true

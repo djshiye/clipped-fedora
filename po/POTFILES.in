@@ -1,0 +1,16 @@
+data/io.github.djshiye.Clipped.desktop.in
+data/io.github.djshiye.Clipped.metainfo.xml.in
+data/io.github.djshiye.Clipped.gschema.xml
+data/ui/window.blp
+data/ui/history_row.blp
+data/ui/glyph_page.blp
+data/ui/preferences.blp
+src/application.rs
+src/model/clip_item.rs
+src/model/glyph.rs
+src/platform/shortcut.rs
+src/preferences.rs
+src/ui/detail_dialog.rs
+src/ui/glyph_page.rs
+src/ui/history_row.rs
+src/window.rs

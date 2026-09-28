@@ -1,173 +1,140 @@
-# Clipped 📋
+# Clipped
 
-A lightweight clipboard history manager with an emoji browser, symbol browser, and system tray icon.  
-Built with C + GTK3. Works on **Linux**, **Windows**, and **macOS**.
+**A clipboard history manager for Fedora and GNOME, rebuilt from the ground up.**
+
+Copy anything. Press **Super+Shift+V**. Pick it. It lands in the app you were using.
+
+Clipped keeps a history of the text and images you copy, lets you search and paste
+them back with the keyboard, and includes an emoji and symbol picker. It runs
+quietly in the background, starts with your session, and sits in the panel tray.
 
 ---
+
+## The rebuild
+
+Clipped 1.0 is a complete rewrite. The earlier app was written in C with GTK 3
+and depended on X11: it grabbed the hotkey with `XGrabKey`, watched the
+clipboard through an XWayland bridge, faked keystrokes with `XTest`, and used the
+long-deprecated `GtkStatusIcon`. On a modern Fedora desktop (GNOME on Wayland)
+that meant the shortcut only worked while an X11 window had focus, the tray
+needed an extension to exist at all, and window placement was ignored.
+
+The new app is written in **Rust** with **GTK 4** and **libadwaita**, and talks to
+the desktop only through **GNOME's portals**. Nothing in it depends on X11, on a
+shell extension, or on the app having focus.
+
+| Concern | Before | Now |
+|---|---|---|
+| Language and toolkit | C, GTK 3 | Rust, GTK 4.22, libadwaita 1.9 |
+| Clipboard monitoring | X11 selection events via XWayland | RemoteDesktop + Clipboard portals |
+| Global shortcut | `XGrabKey` (silent on Wayland apps) | GlobalShortcuts portal, listed in GNOME Settings |
+| Paste into the previous app | `XTest` fake keys | Portal keyboard injection, with focus handed back by GNOME |
+| Start at login | System-wide `/etc/xdg/autostart` file | Background portal; toggle in Preferences or GNOME Settings › Apps |
+| Tray icon | `GtkStatusIcon` (removed in GTK 4) | StatusNotifierItem, shown when the desktop has a tray |
+| History storage | Text file written at exit, images lost | SQLite, written through on every change, images kept as PNG files |
+| Settings | INI file; "max entries" was never saved | GSettings, every control applies immediately |
+| Packaging | `.deb` only | RPM (spec, man page, AppStream metadata, D-Bus service) |
 
 ## Features
 
-- Clipboard history with search and one-click paste
-- Emoji browser — search by name (cat, fire, heart…)
-- Unicode symbol browser — math, arrows, currency, Greek…
-- Settings page — configurable hotkey, max history
-- System tray cat icon — click to open, right-click to quit
-- Autostart at login
-- Single-instance lock
+- **History** of text, file lists and images, persisted across restarts.
+- **Global shortcut** `Super+Shift+V` (`Super+V` is taken by GNOME's notification list). Change it in Settings › Keyboard.
+- **Keyboard-first**: type to filter, `↑`/`↓` to move, `Enter` to paste, `Ctrl+1`–`Ctrl+9` for the first nine, `Delete` to remove (with Undo), `Ctrl+P` to pin, `Ctrl+D` for details, `Escape` to close, `Ctrl+?` for the full list.
+- **Paste on select**: the item is pasted straight into the app you came from. Turn it off in Preferences to copy-and-close instead.
+- **Pin** favourites so they survive trimming; **Undo** after deleting; **Clear History** asks first.
+- **Details view** for the full text or full-size image, with Copy and Paste.
+- **Emoji picker** using GNOME's own emoji database, with localized names and keywords in 24 languages, category chips and a Recent chip.
+- **Symbol picker**: math, arrows, currency, punctuation, keyboard, geometric, Greek and more.
+- **Adaptive layout**: tabs at the bottom on a narrow window; list plus a live preview pane when the window is wider than 700 px.
+- **Runs in the background** and **starts at login** (Preferences › Run in Background).
+- **Status icon** in the panel with Open, Preferences and Quit (on GNOME this needs the AppIndicator extension; the switch is greyed out where no tray exists).
+- **Privacy**: entries flagged by password managers are skipped, clipboard content is never logged, and the history file is private to your user.
+- Follows the system light/dark style and accent colour.
 
----
+## Design
 
-## Download (pre-built)
+The visual language follows Apple's Human Interface Guidelines in spirit, built with
+GNOME's own components: history rows are rounded cards with a hairline ring and a
+soft shadow; the selected card is tinted with the accent colour instead of filled;
+the search field is a pill; secondary controls appear only on hover, focus or
+selection; emoji and symbol cells have rounded hover states; and every state
+change eases over 120–150 ms. All colours are Adwaita semantic tokens, so light
+mode, dark mode and the accent colour follow the system automatically.
 
-All release files are in the [`releases/`](releases/) folder.
+Measured on a 120 Hz display: scrolling 1,000 rows renders at one frame per
+display refresh, with a single dropped frame in three seconds. Idle memory for
+the running service is about 53 MB. See `docs/PERF.md`.
 
-| Platform | File | How to install |
-|---|---|---|
-| Linux (Ubuntu / Debian / Mint) | `clipman_1.0.0_amd64.deb` | `sudo apt install ./releases/clipman_1.0.0_amd64.deb` |
-| Windows | `clipped.exe` | Run the `.exe` directly |
-| macOS | `clipped_1.0.0_macos.dmg` | Open the `.dmg` and drag to Applications |
+## Install (Fedora)
 
----
-
-## Linux
-
-### Install from .deb
-
-```bash
-sudo apt install ./releases/clipman_1.0.0_amd64.deb
-```
-
-This installs the binary, desktop entry, and autostart entry.  
-The app will start automatically on next login.
-
-### Uninstall
+Download the RPM from the [releases](https://github.com/djshiye/clipped-fedora/releases)
+page (or from the `releases/` folder in this repository) and install it:
 
 ```bash
-sudo dpkg -r clipman
+sudo dnf install ./Clipped-v1.0.0.rpm
 ```
 
-Or use the included script (also removes history and config):
+### First run
+
+Launch **Clipped** from the app grid. GNOME asks two things, once:
+
+1. **Remote desktop access.** This is how GNOME lets an app watch the clipboard
+   in the background and paste for you. Click **Share**. Nothing leaves your
+   computer; the permission is remembered.
+2. **Bind the shortcut** `Super+Shift+V`. Accept it.
+
+From then on Clipped runs in the background, starts at login, and shows its
+icon in the panel tray.
+
+### Requirements
+
+Fedora 44 or newer with GNOME (GTK 4.22, libadwaita 1.9, `xdg-desktop-portal-gnome`).
+Other desktops need a portal backend that implements RemoteDesktop with
+Clipboard, and GlobalShortcuts.
+
+## Build from source
 
 ```bash
-./uninstall.sh
+sudo dnf install rust cargo meson gtk4-devel libadwaita-devel sqlite-devel \
+     blueprint-compiler desktop-file-utils appstream gettext
+meson setup builddir
+meson compile -C builddir
+sudo meson install -C builddir
 ```
 
-### Build from source
+For development, `cargo run` works without installing, as long as a desktop file
+for `io.github.djshiye.Clipped` exists in `~/.local/share/applications`, because
+the portals identify apps by their desktop entry.
+
+### Build the RPM
 
 ```bash
-./install.sh        # installs build deps + compiles + installs to /usr
+cargo vendor vendor && tar -cJf clipped-1.0.0-vendor.tar.xz vendor
+# source tarball named clipped-1.0.0.tar.gz with a clipped-1.0.0/ prefix
+rpmdev-setuptree && cp clipped-1.0.0*.tar.* ~/rpmbuild/SOURCES/
+rpmbuild -ba build-aux/clipped.spec
 ```
 
-Or step by step:
+CI (`.github/workflows/ci.yml`) runs formatting, clippy, unit tests, the Meson
+validation tests and an RPM build on Fedora 44 and Rawhide.
 
-```bash
-make deps           # install build dependencies via apt
-make                # compile
-sudo make install   # install to /usr
+## Project layout
+
+```
+src/            Rust sources: application, window, model, storage, platform (portals, shortcut, tray), ui
+data/           Blueprint UI files, stylesheet, icons, desktop entry, AppStream metainfo, GSettings schema, man page
+build-aux/      RPM spec and the Cargo wrapper used by Meson
+docs/           Rebuild plan, verified platform findings, performance notes
+spikes/         Throwaway portal experiments that validated the approach
 ```
 
-### Run without installing (portable)
+## Documentation
 
-```bash
-./run.sh
-```
+- `docs/FEDORA_REBUILD_PLAN.md`: architecture, design rules and the phased plan.
+- `docs/SPIKES.md`: what was verified on GNOME 50 and the platform quirks worth knowing.
+- `docs/PERF.md`: measurements and how to reproduce them.
+- `CHANGELOG.md`: release notes.
 
----
+## License
 
-## Windows
-
-### Install
-
-1. Download `releases/clipped.exe`
-2. Double-click to run — no installation needed
-3. The app will appear in the system tray
-
-> **Requires:** [MSYS2 GTK3 runtime](https://www.msys2.org) DLLs in the same folder as the `.exe`.  
-> See [build instructions](#build-on-windows) to get the DLL bundle.
-
-### Uninstall
-
-Close the app from the tray → right-click → **Quit**, then delete the folder.
-
-### Build on Windows
-
-1. Install [MSYS2](https://www.msys2.org)
-2. Open **MSYS2 MinGW 64-bit** terminal
-3. Run:
-
-```bash
-pacman -S mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gcc pkg-config make
-make -f Makefile.windows
-```
-
-Output goes to `releases/clipped.exe`.  
-Bundle the required DLLs alongside it:
-
-```bash
-ldd releases/clipped.exe   # shows which DLLs to copy
-```
-
----
-
-## macOS
-
-### Install
-
-1. Download `releases/clipped_1.0.0_macos.dmg`
-2. Open the `.dmg` and drag **Clipped** to your Applications folder
-3. Launch from Applications
-
-> **First launch:** macOS will ask for **Accessibility permission** (required for the global hotkey).  
-> Go to **System Settings → Privacy & Security → Accessibility** and enable Clipped.
-
-### Uninstall
-
-Drag `Clipped.app` from Applications to Trash.  
-To also remove history and config:
-
-```bash
-rm -rf ~/.config/clipman ~/.local/share/clipman
-```
-
-### Build on macOS
-
-```bash
-# Install Homebrew: https://brew.sh
-brew install gtk+3 pkg-config
-
-make -f Makefile.macos        # builds clipped.app
-make -f Makefile.macos dmg    # packages as releases/clipped_1.0.0_macos.dmg
-```
-
----
-
-## Default Hotkey
-
-`Super+V` on all platforms:
-
-| Platform | Key |
-|---|---|
-| Linux | Super (⊞ Win key) + V |
-| Windows | Win (⊞) + V |
-| macOS | Command (⌘) + V |
-
-Change it any time in the **⚙ Settings** page inside the app.
-
----
-
-## Compatibility
-
-| Distro / OS | Works? | Notes |
-|---|---|---|
-| Ubuntu 20.04 / 22.04 | ✅ | |
-| Ubuntu 24.04 | ✅ | Runs via XWayland (`GDK_BACKEND=x11`) |
-| Linux Mint | ✅ | Tray works natively on Cinnamon |
-| Debian 11 / 12 | ✅ | |
-| Windows 10 / 11 | ✅ | Needs GTK3 DLLs |
-| macOS 12+ (Monterey+) | ✅ | Needs Homebrew GTK3 + Accessibility permission |
-
----
-
-## Built by
-
-**irony** — vibe coded 🐱
+MIT. See `LICENSE`.

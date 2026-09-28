@@ -1,0 +1,42 @@
+.TH CLIPPED 1 "September 2026" "clipped 1.0.0" "User Commands"
+.SH NAME
+clipped \- clipboard history manager for GNOME
+.SH SYNOPSIS
+.B clipped
+.RI [ OPTION ]
+.SH DESCRIPTION
+.B Clipped
+records the text and images you copy and lets you paste any of them back into
+the application you were using. It runs in the background on GNOME (Wayland)
+using desktop portals for clipboard access, the global shortcut and autostart,
+and includes a searchable emoji and symbol picker.
+.PP
+Press
+.B Super+Shift+V
+to open it from any application. Type to filter, use the arrow keys to move,
+and press
+.B Enter
+to paste. The shortcut can be changed in Settings \(en Keyboard.
+.SH OPTIONS
+.TP
+.B \-\-gapplication\-service
+Start in the background without showing the window. This is how the login
+autostart entry and D-Bus activation launch it.
+.TP
+.B \-\-help
+Show the standard GApplication options.
+.SH FILES
+.TP
+.I ~/.local/share/clipped/history.db
+Clipboard history (SQLite). Images are stored as PNG files in
+.IR ~/.local/share/clipped/images/ .
+.TP
+.I ~/.config/autostart/io.github.djshiye.Clipped.desktop
+Autostart entry managed through the Background portal.
+.SH SETTINGS
+Preferences are stored in GSettings under
+.BR io.github.djshiye.Clipped .
+.SH BUGS
+Report at https://github.com/djshiye/clipped-fedora/issues
+.SH AUTHOR
+djshiye

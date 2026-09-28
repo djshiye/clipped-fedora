@@ -1,0 +1,39 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ClippedGlyphPage : Box {
+  orientation: vertical;
+
+  SearchEntry search_entry {
+    margin-start: 12;
+    margin-end: 12;
+    margin-top: 4;
+    margin-bottom: 10;
+  }
+
+  ScrolledWindow {
+    vscrollbar-policy: never;
+    hscrollbar-policy: external;
+    margin-start: 12;
+    margin-end: 12;
+    margin-bottom: 6;
+
+    child: Adw.ToggleGroup groups {
+      halign: center;
+      homogeneous: false;
+      styles ["round", "chips"]
+    };
+  }
+
+  ScrolledWindow {
+    hscrollbar-policy: never;
+    vexpand: true;
+
+    child: GridView grid {
+      min-columns: 6;
+      max-columns: 14;
+      single-click-activate: true;
+      styles ["glyph-grid"]
+    };
+  }
+}

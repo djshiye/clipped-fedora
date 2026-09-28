@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Clipped
+Comment=Clipboard history manager
+Exec=clipped
+Icon=io.github.djshiye.Clipped
+Terminal=false
+Type=Application
+Categories=Utility;GTK;GNOME;
+Keywords=clipboard;copy;paste;history;emoji;
+StartupNotify=true
+DBusActivatable=true
+X-GNOME-UsesNotifications=false

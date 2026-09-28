@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Clipped app icon: a clipboard with a cat face, on the GNOME 128px grid. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#62a0ea"/>
+      <stop offset="1" stop-color="#1c71d8"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#deddda"/>
+    </linearGradient>
+  </defs>
+  <!-- clipboard body -->
+  <rect x="20" y="18" width="88" height="100" rx="12" fill="url(#board)"/>
+  <rect x="20" y="18" width="88" height="100" rx="12" fill="none" stroke="#1a5fb4" stroke-width="2"/>
+  <!-- paper -->
+  <rect x="30" y="32" width="68" height="76" rx="6" fill="url(#paper)"/>
+  <!-- clip -->
+  <rect x="46" y="10" width="36" height="18" rx="6" fill="#3d3846"/>
+  <rect x="52" y="14" width="24" height="8" rx="3" fill="#77767b"/>
+  <!-- cat face -->
+  <path d="M42 62 L50 44 L60 58 Z" fill="#3d3846"/>
+  <path d="M86 62 L78 44 L68 58 Z" fill="#3d3846"/>
+  <path d="M46 60 L51 50 L57 58 Z" fill="#f66151"/>
+  <path d="M82 60 L77 50 L71 58 Z" fill="#f66151"/>
+  <ellipse cx="64" cy="74" rx="24" ry="20" fill="#3d3846"/>
+  <circle cx="55" cy="71" r="4" fill="#8ff0a4"/>
+  <circle cx="73" cy="71" r="4" fill="#8ff0a4"/>
+  <circle cx="56" cy="70" r="1.5" fill="#3d3846"/>
+  <circle cx="74" cy="70" r="1.5" fill="#3d3846"/>
+  <path d="M61 79 L67 79 L64 83 Z" fill="#f66151"/>
+  <path d="M64 83 Q60 88 56 86 M64 83 Q68 88 72 86" fill="none" stroke="#f6f5f4" stroke-width="2" stroke-linecap="round"/>
+  <!-- whiskers -->
+  <path d="M38 76 L50 78 M38 82 L50 81 M90 76 L78 78 M90 82 L78 81" stroke="#3d3846" stroke-width="2" stroke-linecap="round"/>
+</svg>

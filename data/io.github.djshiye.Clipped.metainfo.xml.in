@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.djshiye.Clipped</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Clipped</name>
+  <summary>Clipboard history with emoji and symbols</summary>
+  <description>
+    <p>Clipped keeps a history of the text and images you copy and lets you paste any of them back into the app you were using with a single keystroke. It also offers a searchable emoji and symbol picker.</p>
+    <ul>
+      <li>Runs in the background and records clipboard changes through GNOME's portals</li>
+      <li>Open it anywhere with Super+Shift+V, search, and press Enter to paste</li>
+      <li>Pin favourites, delete with undo, and keep images as well as text</li>
+      <li>Emoji browser using GNOME's localized emoji names, plus a symbol browser</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.djshiye.Clipped.desktop</launchable>
+  <provides>
+    <binary>clipped</binary>
+  </provides>
+  <url type="homepage">https://github.com/djshiye/clipped-fedora</url>
+  <url type="bugtracker">https://github.com/djshiye/clipped-fedora/issues</url>
+  <url type="vcs-browser">https://github.com/djshiye/clipped-fedora</url>
+  <developer id="io.github.djshiye">
+    <name>djshiye</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#62a0ea</color>
+    <color type="primary" scheme_preference="dark">#1c71d8</color>
+  </branding>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <releases>
+    <release version="1.0.0" date="2026-09-28">
+      <description>
+        <p>Complete rewrite in Rust with GTK 4 and libadwaita for GNOME on Wayland.</p>
+      </description>
+    </release>
+  </releases>
+</component>

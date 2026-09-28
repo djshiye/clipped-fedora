@@ -1,0 +1,129 @@
+/* Clipped: a softer, card-based look on top of Adwaita's semantic tokens.
+ * Only var(--…) colours and color-mix(): light, dark and accent follow the system. */
+
+/* ── Chrome: flat header that merges with the content ─────────────────── */
+headerbar {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ── Search: pill field with a soft focus ring ────────────────────────── */
+entry.search {
+  min-height: 36px;
+  border-radius: 999px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border: 1px solid color-mix(in srgb, var(--view-fg-color) 8%, transparent);
+  background: color-mix(in srgb, var(--view-fg-color) 5%, transparent);
+  box-shadow: none;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out, background 150ms ease-out;
+}
+entry.search:focus-within {
+  border-color: color-mix(in srgb, var(--accent-bg-color) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-bg-color) 22%, transparent);
+  background: color-mix(in srgb, var(--view-fg-color) 3%, transparent);
+}
+
+/* ── History: rows as cards ───────────────────────────────────────────── */
+listview.clip-list {
+  background: transparent;
+  padding: 2px 12px 12px 12px;
+}
+listview.clip-list > row {
+  margin: 0 0 8px 0;
+  padding: 0;
+  border-radius: 14px;
+  background: var(--card-bg-color);
+  color: var(--view-fg-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 10%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--view-fg-color) 6%, transparent);
+  transition: background 150ms ease-out, box-shadow 150ms ease-out;
+}
+listview.clip-list > row:hover {
+  background: color-mix(in srgb, var(--card-bg-color) 94%, var(--view-fg-color));
+  box-shadow: 0 2px 6px color-mix(in srgb, black 14%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--view-fg-color) 8%, transparent);
+}
+listview.clip-list > row:selected,
+listview.clip-list > row:selected:hover {
+  background: color-mix(in srgb, var(--accent-bg-color) 14%, var(--card-bg-color));
+  color: var(--view-fg-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 10%, transparent),
+              0 0 0 1.5px color-mix(in srgb, var(--accent-bg-color) 60%, transparent);
+}
+listview.clip-list > row:selected label,
+listview.clip-list > row:selected image {
+  color: inherit;
+}
+listview.clip-list > row:selected .dim-label {
+  opacity: 0.6;
+}
+/* secondary control reveals on hover, keyboard focus or selection */
+listview.clip-list > row menubutton {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+listview.clip-list > row:hover menubutton,
+listview.clip-list > row:selected menubutton,
+listview.clip-list > row:focus-within menubutton {
+  opacity: 1;
+}
+.clip-thumbnail {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--view-fg-color) 10%, transparent);
+}
+.clip-kind-icon {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-bg-color) 14%, transparent);
+  color: var(--accent-color);
+}
+
+/* ── Emoji and symbols ────────────────────────────────────────────────── */
+gridview.glyph-grid {
+  background: transparent;
+  padding: 6px 10px 12px 10px;
+}
+gridview.glyph-grid > child {
+  border-radius: 12px;
+  margin: 3px;
+  padding: 0;
+  transition: background 120ms ease-out;
+}
+gridview.glyph-grid > child:hover {
+  background: color-mix(in srgb, var(--view-fg-color) 8%, transparent);
+}
+gridview.glyph-grid > child:active,
+gridview.glyph-grid > child:selected {
+  background: color-mix(in srgb, var(--accent-bg-color) 22%, transparent);
+}
+.glyph {
+  font-size: 1.7em;
+  min-width: 44px;
+  min-height: 44px;
+}
+togglegroup.chips {
+  background: color-mix(in srgb, var(--view-fg-color) 5%, transparent);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+/* ── Preview pane (wide layout) ───────────────────────────────────────── */
+.preview-pane {
+  background: color-mix(in srgb, var(--view-bg-color) 60%, var(--window-bg-color));
+}
+.preview-card {
+  border-radius: 14px;
+  background: var(--card-bg-color);
+  padding: 4px;
+  box-shadow: 0 1px 2px color-mix(in srgb, black 10%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--view-fg-color) 6%, transparent);
+}
+
+/* ── Bottom tab bar on narrow windows ─────────────────────────────────── */
+viewswitcherbar {
+  background: transparent;
+  box-shadow: none;
+  border-top: 1px solid color-mix(in srgb, var(--view-fg-color) 7%, transparent);
+}

@@ -12,3 +12,9 @@ build/
 
 # editor
 .vscode/
+
+# rust
+target/
+spikes/**/target/
+
+builddir/

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/github/djshiye/Clipped">
+    <file preprocess="xml-stripblanks">ui/window.ui</file>
+    <file preprocess="xml-stripblanks">ui/history_row.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences.ui</file>
+    <file preprocess="xml-stripblanks">ui/glyph_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/shortcuts.ui</file>
+    <file preprocess="xml-stripblanks">ui/detail_dialog.ui</file>
+    <file>style.css</file>
+    <file>symbols.json</file>
+  </gresource>
+</gresources>

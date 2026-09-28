@@ -1,0 +1,1 @@
+option('offline', type: 'boolean', value: false, description: 'Pass --offline to cargo (for RPM builds with vendored or system crates)')

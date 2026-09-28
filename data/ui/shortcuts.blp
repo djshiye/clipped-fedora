@@ -1,0 +1,72 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.ShortcutsDialog shortcuts_dialog {
+  Adw.ShortcutsSection {
+    title: _("General");
+
+    Adw.ShortcutsItem {
+      title: _("Open or Hide Clipped");
+      accelerator: "<Super><Shift>v";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Search");
+      accelerator: "<Control>f";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Preferences");
+      accelerator: "<Control>comma";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Keyboard Shortcuts");
+      accelerator: "<Control>question";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close Window");
+      accelerator: "Escape";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      accelerator: "<Control>q";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("History");
+
+    Adw.ShortcutsItem {
+      title: _("Move Selection");
+      accelerator: "Up Down";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Paste Selected Item");
+      accelerator: "Return";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Paste Item 1 to 9");
+      accelerator: "<Control>1";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Pin or Unpin Selected Item");
+      accelerator: "<Control>p";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Show Details");
+      accelerator: "<Control>d";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Delete Selected Item");
+      accelerator: "Delete";
+    }
+  }
+}

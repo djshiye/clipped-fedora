@@ -1,0 +1,18 @@
+[package]
+name = "portal-spike"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Throwaway: exercises the three portals Clipped 2.0 depends on.
+#   1. RemoteDesktop + Clipboard  -> background clipboard monitoring + restore token
+#   2. GlobalShortcuts            -> Super+Shift+V activation
+#   3. NotifyKeyboardKeycode      -> Ctrl+V injection into the previously focused app
+
+# Standalone: not part of the app's package or vendor tree.
+[workspace]
+
+[dependencies]
+ashpd = { version = "0.13", default-features = false, features = ["async-io", "clipboard", "remote_desktop", "screencast", "global_shortcuts"] }
+async-io = "2"
+futures-util = "0.3"

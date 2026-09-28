@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="clipped">
+  <schema id="io.github.djshiye.Clipped" path="/io/github/djshiye/Clipped/">
+    <key name="max-history" type="u">
+      <range min="10" max="1000"/>
+      <default>100</default>
+      <summary>Maximum number of history entries</summary>
+      <description>Older unpinned entries are removed beyond this count.</description>
+    </key>
+    <key name="paste-on-select" type="b">
+      <default>true</default>
+      <summary>Paste into the previous app when an item is selected</summary>
+    </key>
+    <key name="run-in-background" type="b">
+      <default>true</default>
+      <summary>Start at login and keep recording while the window is closed</summary>
+    </key>
+    <key name="show-tray-icon" type="b">
+      <default>true</default>
+      <summary>Show a status icon when the desktop supports one</summary>
+    </key>
+    <key name="recent-emoji" type="as">
+      <default>[]</default>
+      <summary>Recently used emoji</summary>
+    </key>
+    <key name="recent-symbols" type="as">
+      <default>[]</default>
+      <summary>Recently used symbols</summary>
+    </key>
+    <key name="restore-token" type="s">
+      <default>''</default>
+      <summary>Portal session restore token</summary>
+    </key>
+    <key name="window-width" type="i">
+      <default>380</default>
+    </key>
+    <key name="window-height" type="i">
+      <default>560</default>
+    </key>
+  </schema>
+</schemalist>
