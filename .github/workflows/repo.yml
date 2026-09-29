@@ -1,0 +1,58 @@
+name: dnf repository
+
+# Publishes the latest GitHub release's RPM as a dnf repository on GitHub
+# Pages, so `dnf upgrade` picks up new versions. Runs after each release
+# (called from ci.yml) or by hand from the Actions tab.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish dnf repository
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Install createrepo_c
+        run: sudo apt-get update && sudo apt-get install -y createrepo-c
+
+      - name: Build repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Only Fedora 44 builds are released; the path carries the version
+          # so a future Fedora gets its own directory.
+          DIR=site/fedora/44/x86_64
+          mkdir -p "$DIR"
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern '*.fc44.x86_64.rpm' --dir "$DIR"
+          createrepo_c "$DIR"
+          BASE="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          # Packages are unsigned; HTTPS from GitHub Pages is the trust anchor.
+          cat > site/clipperino.repo <<EOF
+          [clipperino]
+          name=Clipperino
+          baseurl=${BASE}/fedora/\$releasever/\$basearch/
+          enabled=1
+          gpgcheck=0
+          metadata_expire=1h
+          skip_if_unavailable=True
+          EOF
+          ls -R site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

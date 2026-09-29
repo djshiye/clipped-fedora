@@ -68,12 +68,20 @@ the running service is about 53 MB. See `docs/PERF.md`.
 
 ## Install (Fedora)
 
-Download the RPM from the [latest release](https://github.com/djshiye/Clipperino/releases/latest)
-and install it:
+Add the Clipperino repository once, then install. `sudo dnf upgrade` keeps
+it up to date from then on:
 
 ```bash
-sudo dnf install ./clipperino-*.rpm
+sudo dnf config-manager addrepo --from-repofile=https://djshiye.github.io/clipperino/clipperino.repo
+sudo dnf install clipperino
 ```
+
+The repository is published to GitHub Pages from each release by
+`.github/workflows/repo.yml`. Its packages are unsigned (`gpgcheck=0`), so
+you trust them because they come over HTTPS from this repository. You can
+also download the RPM from the [latest release](https://github.com/djshiye/Clipperino/releases/latest)
+and install it with `sudo dnf install ./clipperino-*.rpm`, but then it won't
+receive updates.
 
 ### First run
 
@@ -119,7 +127,8 @@ rpmbuild -ba build-aux/clipperino.spec
 CI (`.github/workflows/ci.yml`) runs formatting, clippy, unit tests, the Meson
 validation tests and an RPM build on Fedora 44 and Rawhide. Pushing a `v*` tag
 also publishes a GitHub release with the Fedora 44 RPM and the source and
-vendor tarballs the spec expects.
+vendor tarballs the spec expects, and then refreshes the dnf repository on
+GitHub Pages.
 
 ## Project layout
 
