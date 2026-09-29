@@ -171,6 +171,7 @@ spikes/         Throwaway portal experiments that validated the approach
 ## Documentation
 
 - `docs/FEDORA_REBUILD_PLAN.md`: architecture, design rules and the phased plan.
+- `docs/FLATPAK.md`: Flatpak status, the test checklist and the Flathub submission steps.
 - `docs/SPIKES.md`: what was verified on GNOME 50 and the platform quirks worth knowing.
 - `docs/PERF.md`: measurements and how to reproduce them.
 - `CHANGELOG.md`: release notes.
