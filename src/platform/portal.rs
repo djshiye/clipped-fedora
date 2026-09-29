@@ -52,12 +52,58 @@ const TEXT_MIMES: [&str; 5] = [
     "TEXT",
 ];
 const IMAGE_MIMES: [&str; 1] = ["image/png"];
+/// Files paste as files in Nautilus (GNOME's own format first) and as their
+/// URIs in text fields.
+const FILE_MIMES: [&str; 7] = [
+    "x-special/gnome-copied-files",
+    "text/uri-list",
+    "text/plain;charset=utf-8",
+    "text/plain",
+    "UTF8_STRING",
+    "STRING",
+    "TEXT",
+];
 
 /// What we currently offer on the clipboard (served on demand).
 #[derive(Debug, Clone)]
 pub enum Offer {
     Text(String),
     Png(Vec<u8>),
+    /// File URIs, as captured from `text/uri-list`.
+    Files(Vec<String>),
+}
+
+impl Offer {
+    fn mimes(&self) -> &'static [&'static str] {
+        match self {
+            Offer::Text(_) => &TEXT_MIMES,
+            Offer::Png(_) => &IMAGE_MIMES,
+            Offer::Files(_) => &FILE_MIMES,
+        }
+    }
+
+    /// The bytes to send for a transfer request in `mime`, if we offered it.
+    fn bytes_for(&self, mime: &str) -> Option<Vec<u8>> {
+        match self {
+            Offer::Text(t) if TEXT_MIMES.contains(&mime) => Some(t.as_bytes().to_vec()),
+            Offer::Png(b) if mime == "image/png" => Some(b.clone()),
+            Offer::Files(uris) => match mime {
+                "x-special/gnome-copied-files" => {
+                    Some(format!("copy\n{}", uris.join("\n")).into_bytes())
+                }
+                // RFC 2483: CRLF-terminated lines.
+                "text/uri-list" => Some(
+                    uris.iter()
+                        .flat_map(|u| [u.as_str(), "\r\n"])
+                        .collect::<String>()
+                        .into_bytes(),
+                ),
+                m if TEXT_MIMES.contains(&m) => Some(uris.join("\n").into_bytes()),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }
 
 pub struct PortalSession {
@@ -155,8 +201,13 @@ impl PortalSession {
             ashpd::Error::from(ashpd::zbus::Error::InputOutput(std::sync::Arc::new(e)))
         };
         let mut reader = async_io::Async::new(std::fs::File::from(fd)).map_err(io_err)?;
+        // Stop one byte past the limit instead of buffering an unbounded payload.
         let mut bytes = Vec::new();
-        reader.read_to_end(&mut bytes).await.map_err(io_err)?;
+        (&mut reader)
+            .take(MAX_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(io_err)?;
         if bytes.is_empty() || bytes.len() > MAX_BYTES {
             return Ok(None);
         }
@@ -206,10 +257,7 @@ impl PortalSession {
     /// Take ownership of the clipboard with `offer`. Works while our window is
     /// hidden, because the portal session (not a surface) is the owner.
     pub async fn offer(&self, offer: Offer) -> ashpd::Result<()> {
-        let mimes: &[&str] = match &offer {
-            Offer::Text(_) => &TEXT_MIMES,
-            Offer::Png(_) => &IMAGE_MIMES,
-        };
+        let mimes = offer.mimes();
         self.offer.replace(Some(offer));
         self.clip
             .set_selection(
@@ -228,13 +276,11 @@ impl PortalSession {
             .await?;
         futures_util::pin_mut!(stream);
         while let Some((_, mime, serial)) = stream.next().await {
-            let bytes: Option<Vec<u8>> = match self.offer.borrow().as_ref() {
-                Some(Offer::Text(t)) if TEXT_MIMES.contains(&mime.as_str()) => {
-                    Some(t.as_bytes().to_vec())
-                }
-                Some(Offer::Png(b)) if mime == "image/png" => Some(b.clone()),
-                _ => None,
-            };
+            let bytes = self
+                .offer
+                .borrow()
+                .as_ref()
+                .and_then(|o| o.bytes_for(&mime));
             let ok = match (
                 bytes,
                 self.clip.selection_write(&self.session, serial).await,
@@ -263,11 +309,42 @@ impl PortalSession {
         Ok(())
     }
 
-    pub fn clipboard(&self) -> &Clipboard {
-        &self.clip
+    /// Resolves when GNOME closes the session (permission revoked, portal or
+    /// shell restarted). Clipboard signals simply stop arriving then.
+    pub async fn closed(&self) {
+        match self.session.receive_closed().await {
+            Ok(stream) => {
+                futures_util::pin_mut!(stream);
+                stream.next().await;
+            }
+            Err(e) => {
+                tracing::warn!("cannot watch the portal session: {e}");
+                std::future::pending::<()>().await;
+            }
+        }
     }
+}
 
-    pub fn session(&self) -> &Session<RemoteDesktop> {
-        &self.session
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn files_are_offered_as_files_and_text() {
+        let offer = Offer::Files(vec!["file:///a%20b".into(), "file:///c".into()]);
+        assert_eq!(
+            offer.bytes_for("x-special/gnome-copied-files").unwrap(),
+            b"copy\nfile:///a%20b\nfile:///c"
+        );
+        assert_eq!(
+            offer.bytes_for("text/uri-list").unwrap(),
+            b"file:///a%20b\r\nfile:///c\r\n"
+        );
+        assert_eq!(
+            offer.bytes_for("text/plain").unwrap(),
+            b"file:///a%20b\nfile:///c"
+        );
+        assert!(offer.bytes_for("image/png").is_none());
+        assert!(Offer::Text("x".into()).bytes_for("text/uri-list").is_none());
     }
 }

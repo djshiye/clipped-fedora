@@ -38,9 +38,9 @@ shell extension, or on the app having focus.
 
 ## Features
 
-- **History** of text, file lists and images, persisted across restarts.
+- **History** of text, file lists and images, persisted across restarts. Copied files paste back as files in Nautilus.
 - **Global shortcut** `Super+Shift+V` (`Super+V` is taken by GNOME's notification list). Change it in Settings › Keyboard.
-- **Keyboard-first**: type to filter, `↑`/`↓` to move, `Enter` to paste, `Ctrl+1`–`Ctrl+9` for the first nine, `Delete` to remove (with Undo), `Ctrl+P` to pin, `Ctrl+D` for details, `Escape` to close, `Ctrl+?` for the full list.
+- **Keyboard-first**: type to filter (search covers the full text of each clip), `↑`/`↓` to move, `Enter` to paste, `Ctrl+1`–`Ctrl+9` for the first nine, `Delete` to remove (with Undo), `Ctrl+P` to pin, `Ctrl+D` for details, `Escape` to close, `Ctrl+?` for the full list.
 - **Paste on select**: the item is pasted straight into the app you came from. Turn it off in Preferences to copy-and-close instead.
 - **Pin** favourites so they survive trimming; **Undo** after deleting; **Clear History** asks first.
 - **Details view** for the full text or full-size image, with Copy and Paste.
@@ -48,8 +48,8 @@ shell extension, or on the app having focus.
 - **Symbol picker**: math, arrows, currency, punctuation, keyboard, geometric, Greek and more.
 - **Adaptive layout**: tabs at the bottom on a narrow window; list plus a live preview pane when the window is wider than 700 px.
 - **Runs in the background** and **starts at login** (Preferences › Run in Background).
-- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips, in a Pinned section and a Recent section, with thumbnails for images and a folder icon for files. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipperino, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; the switch is greyed out where no tray exists.
-- **Privacy**: entries flagged by password managers are skipped, clipboard content is never logged, and the history file is private to your user.
+- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips, in a Pinned section and a Recent section, with thumbnails for images and a folder icon for files. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipperino (with your current shortcut), Pause Recording, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; Preferences says so when no tray exists.
+- **Privacy**: entries flagged by password managers are skipped, clipboard content is never logged, and the history file is private to your user. **Pause Recording** (main menu, panel menu or Preferences) stops saving copies until you resume, and unpinned items can be deleted automatically after a day, a week, 30 or 90 days.
 - Follows the system light/dark style and accent colour.
 
 ## Design
@@ -68,11 +68,11 @@ the running service is about 53 MB. See `docs/PERF.md`.
 
 ## Install (Fedora)
 
-Download the RPM from the [releases](https://github.com/djshiye/Clipperino/releases)
-page (or from the `releases/` folder in this repository) and install it:
+Download the RPM from the [latest release](https://github.com/djshiye/Clipperino/releases/latest)
+and install it:
 
 ```bash
-sudo dnf install ./Clipperino-v1.1.0.rpm
+sudo dnf install ./clipperino-*.rpm
 ```
 
 ### First run
@@ -110,14 +110,16 @@ the portals identify apps by their desktop entry.
 ### Build the RPM
 
 ```bash
-cargo vendor vendor && tar -cJf clipperino-1.1.0-vendor.tar.xz vendor
-# source tarball named clipperino-1.1.0.tar.gz with a clipperino-1.1.0/ prefix
-rpmdev-setuptree && cp clipperino-1.1.0*.tar.* ~/rpmbuild/SOURCES/
+cargo vendor vendor && tar -cJf clipperino-1.2.0-vendor.tar.xz vendor
+# source tarball named clipperino-1.2.0.tar.gz with a clipperino-1.2.0/ prefix
+rpmdev-setuptree && cp clipperino-1.2.0*.tar.* ~/rpmbuild/SOURCES/
 rpmbuild -ba build-aux/clipperino.spec
 ```
 
 CI (`.github/workflows/ci.yml`) runs formatting, clippy, unit tests, the Meson
-validation tests and an RPM build on Fedora 44 and Rawhide.
+validation tests and an RPM build on Fedora 44 and Rawhide. Pushing a `v*` tag
+also publishes a GitHub release with the Fedora 44 RPM and the source and
+vendor tarballs the spec expects.
 
 ## Project layout
 

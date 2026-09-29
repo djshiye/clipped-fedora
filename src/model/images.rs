@@ -10,6 +10,9 @@ pub const THUMB_SIZE: i32 = 192;
 pub struct Decoded {
     pub width: i32,
     pub height: i32,
+    /// blake3 of the RGBA pixels: equal for the same picture whatever encoder
+    /// produced the PNG, unlike a hash of the file bytes.
+    pub pixel_hash: [u8; 32],
     pub thumbnail: gdk::Texture,
 }
 
@@ -19,8 +22,33 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, glib::Error> {
     Ok(Decoded {
         width: full.width(),
         height: full.height(),
+        pixel_hash: pixel_hash(&full),
         thumbnail: thumbnail_of(&full),
     })
+}
+
+/// Hash the image as 8-bit RGBA rows, skipping rowstride padding, so RGB vs
+/// RGBA sources and different strides of the same picture agree.
+fn pixel_hash(pb: &gdk_pixbuf::Pixbuf) -> [u8; 32] {
+    let rgba = if pb.has_alpha() {
+        pb.clone()
+    } else {
+        pb.add_alpha(false, 0, 0, 0).unwrap_or_else(|_| pb.clone())
+    };
+    let (w, h) = (rgba.width().max(0) as usize, rgba.height().max(0) as usize);
+    let stride = rgba.rowstride().max(0) as usize;
+    let row = w * rgba.n_channels().max(0) as usize;
+    let bytes = rgba.read_pixel_bytes();
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&(w as u64).to_le_bytes());
+    hasher.update(&(h as u64).to_le_bytes());
+    for y in 0..h {
+        let start = y * stride;
+        if let Some(line) = bytes.get(start..start + row) {
+            hasher.update(line);
+        }
+    }
+    *hasher.finalize().as_bytes()
 }
 
 pub fn thumbnail_from_file(path: &str) -> Result<gdk::Texture, glib::Error> {

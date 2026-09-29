@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.2.0 (2026-09-29)
+
+### New
+
+- **Pause recording** from the main menu, the status icon menu or
+  Preferences. A banner in the window shows it is paused, with a Resume button.
+- **Delete unpinned items automatically** after 1 day, 1 week, 30 days or
+  90 days (Preferences › History; off by default). Checked at startup and hourly.
+- Copied files paste as files in Nautilus (`x-special/gnome-copied-files` and
+  `text/uri-list`), and still paste as their URIs in text fields.
+- Search matches the whole text of a clip (up to its first 64 KB), not just
+  the one-line preview.
+- The status icon menu and Preferences show the shortcut actually bound in
+  GNOME Settings, and follow changes to it.
+- "5 min ago" labels stay current while the window is open.
+- The same image copied from two apps is stored once: images are identified
+  by their pixels, not by the PNG bytes each app encodes.
+
+### Fixed
+
+- Row menu actions (Paste, Copy, Pin, Details, Delete) could act on the
+  wrong item after a clip was added or deleted while the window was open.
+  They now name the item by its content hash. The Pin/Unpin label also
+  follows the item when it is pinned with Ctrl+P.
+- Pinning an item restored from a previous session did not update the
+  status icon menu.
+- The Show Status Icon switch in Preferences did nothing. Without a tray host,
+  its subtitle now explains that GNOME needs the AppIndicator extension.
+- When GNOME ended the clipboard permission session, recording stopped
+  silently. Clipperino now reconnects, or shows the permission page again.
+- Oversized clipboard contents are no longer read fully into memory before
+  the 20 MB limit applies.
+
 ## 1.1.0 (2026-09-29)
 
 - Renamed from Clipped to Clipperino: app ID `io.github.djshiye.Clipperino`,

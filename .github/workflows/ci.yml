@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
 jobs:
@@ -63,3 +64,48 @@ jobs:
           name: clipperino-rpm-fedora-${{ matrix.release }}
           path: ~/rpmbuild/RPMS/x86_64/clipperino-*.rpm
           if-no-files-found: error
+
+      # The spec downloads these from the release (Source0, Source1).
+      - name: Upload source tarballs
+        if: matrix.release == '44'
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipperino-sources
+          path: ~/rpmbuild/SOURCES/clipperino-*.tar.*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: fedora
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: false
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Notes: this version's section of CHANGELOG.md.
+          awk -v v="$VERSION" '
+            $0 ~ "^## " v " " {on=1; next}
+            on && /^## / {exit}
+            on {print}
+          ' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "No CHANGELOG.md section for $VERSION"; exit 1; }
+          mkdir upload
+          cp assets/clipperino-sources/* upload/
+          # Fedora 44 is the supported release; Rawhide builds stay CI-only.
+          cp assets/clipperino-rpm-fedora-44/*.rpm upload/
+          gh release create "$GITHUB_REF_NAME" upload/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Clipperino $VERSION" \
+            --notes-file notes.md

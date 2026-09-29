@@ -27,6 +27,8 @@ mod imp {
         #[template_child]
         pub more_button: TemplateChild<gtk::MenuButton>,
         pub bindings: RefCell<Vec<glib::Binding>>,
+        pub item: RefCell<Option<ClipItem>>,
+        pub pinned_handler: RefCell<Option<glib::SignalHandlerId>>,
         pub menu: RefCell<Option<gio::Menu>>,
         pub context_menu: RefCell<Option<gtk::PopoverMenu>>,
     }
@@ -86,10 +88,9 @@ impl Default for HistoryRow {
 }
 
 impl HistoryRow {
-    /// `position` is the row's index in the visible (filtered) list; the row
-    /// menu targets window actions with it.
-    pub fn bind(&self, item: &ClipItem, position: u32) {
+    pub fn bind(&self, item: &ClipItem) {
         let imp = self.imp();
+        imp.item.replace(Some(item.clone()));
         imp.preview.set_label(&item.preview());
         let code = item.kind() == ClipKind::Text
             && item.text().is_some_and(|t| crate::ui::looks_like_code(&t));
@@ -98,7 +99,7 @@ impl HistoryRow {
         } else {
             imp.preview.remove_css_class("monospace");
         }
-        imp.time.set_label(&relative_time(item.timestamp()));
+        self.refresh_time();
         match item.kind() {
             ClipKind::Image => {
                 imp.icon.set_visible(false);
@@ -125,14 +126,31 @@ impl HistoryRow {
             .build();
         imp.bindings.borrow_mut().push(pin_binding);
 
-        let menu = gio::Menu::new();
+        // The Pin/Unpin label follows the item, whichever way it is toggled.
+        let handler = item.connect_pinned_notify(glib::clone!(
+            #[weak(rename_to = row)]
+            self,
+            move |item| row.rebuild_menu(item)
+        ));
+        imp.pinned_handler.replace(Some(handler));
+        self.rebuild_menu(item);
+
+        self.update_property(&[gtk::accessible::Property::Label(&item.preview())]);
+    }
+
+    /// Menu actions name the item by its content key, not its list position:
+    /// rows are not rebound when clips are added or deleted above them.
+    fn rebuild_menu(&self, item: &ClipItem) {
+        let imp = self.imp();
+        let key = item.key().to_variant();
         let add = |section: &gio::Menu, label: &str, action: &str| {
             let mi = gio::MenuItem::new(Some(label), None);
-            mi.set_action_and_target_value(Some(action), Some(&position.to_variant()));
+            mi.set_action_and_target_value(Some(action), Some(&key));
             section.append_item(&mi);
         };
+        let menu = gio::Menu::new();
         let section = gio::Menu::new();
-        add(&section, &gettext("Paste"), "win.activate-nth");
+        add(&section, &gettext("Paste"), "win.paste-item");
         add(&section, &gettext("Copy"), "win.copy-item");
         add(
             &section,
@@ -149,15 +167,27 @@ impl HistoryRow {
         add(&danger, &gettext("Delete"), "win.delete-item");
         menu.append_section(None, &danger);
         imp.more_button.set_menu_model(Some(&menu));
+        if let Some(popover) = imp.context_menu.borrow().as_ref() {
+            popover.set_menu_model(Some(&menu));
+        }
         imp.menu.replace(Some(menu));
+    }
 
-        self.update_property(&[gtk::accessible::Property::Label(&item.preview())]);
+    /// Re-render the relative time ("5 min ago"), which goes stale.
+    pub fn refresh_time(&self) {
+        let imp = self.imp();
+        if let Some(item) = imp.item.borrow().as_ref() {
+            imp.time.set_label(&relative_time(item.timestamp()));
+        }
     }
 
     pub fn unbind(&self) {
         let imp = self.imp();
         for b in imp.bindings.borrow_mut().drain(..) {
             b.unbind();
+        }
+        if let (Some(item), Some(handler)) = (imp.item.take(), imp.pinned_handler.take()) {
+            item.disconnect(handler);
         }
         imp.picture.set_paintable(gtk::gdk::Paintable::NONE);
         imp.more_button.set_menu_model(None::<&gio::MenuModel>);

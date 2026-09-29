@@ -26,6 +26,8 @@ mod imp {
         pub tray_icon_cache: std::cell::RefCell<std::collections::HashMap<[u8; 32], Vec<u8>>>,
         /// `None` until the first attempt; `Some(false)` when no tray host exists.
         pub tray_available: std::cell::Cell<Option<bool>>,
+        /// The toggle shortcut as bound in GNOME; `None` when removed.
+        pub shortcut: std::cell::RefCell<Option<crate::platform::shortcut::Trigger>>,
     }
 
     #[glib::object_subclass]
@@ -41,6 +43,9 @@ mod imp {
         fn startup(&self) {
             self.parent_startup();
             let app = self.obj();
+            // Shown until the portal reports the real binding.
+            self.shortcut
+                .replace(Some(crate::platform::shortcut::Trigger::default_trigger()));
             app.setup_css();
             app.setup_actions();
             // Keep running without a visible window: we are a background service.
@@ -57,7 +62,15 @@ mod imp {
                 window,
                 move |_| app.connect_portal(window)
             ));
-            if settings().string(settings::RESTORE_TOKEN).is_empty() {
+            // Debug builds: CLIPPERINO_DEBUG_NO_PORTAL=1 skips the portal, so the
+            // list can be exercised in a nested or headless session.
+            #[cfg(debug_assertions)]
+            let skip_portal = std::env::var_os("CLIPPERINO_DEBUG_NO_PORTAL").is_some();
+            #[cfg(not(debug_assertions))]
+            let skip_portal = false;
+            if skip_portal {
+                tracing::warn!("CLIPPERINO_DEBUG_NO_PORTAL set: no clipboard access this run");
+            } else if settings().string(settings::RESTORE_TOKEN).is_empty() {
                 window.show_permission_page();
             } else {
                 app.connect_portal(window.clone());
@@ -124,6 +137,12 @@ impl ClipperinoApplication {
                     "{}/ui/shortcuts.ui",
                     config::RESOURCE_PREFIX
                 ));
+                // Show the key actually bound in GNOME, not the default.
+                if let Some(item) = builder.object::<adw::ShortcutsItem>("toggle_item") {
+                    item.set_accelerator(
+                        &app.shortcut().map(|t| t.accelerator()).unwrap_or_default(),
+                    );
+                }
                 if let Some(dialog) = builder.object::<adw::ShortcutsDialog>("shortcuts_dialog") {
                     dialog.present(app.active_window().as_ref());
                 }
@@ -143,6 +162,8 @@ impl ClipperinoApplication {
             })
             .build();
         self.add_action_entries([quit, about, preferences, shortcuts, hide]);
+        // Stateful toggle backed by the setting: menu, banner and tray share it.
+        self.add_action(&settings().create_action(settings::PAUSE_RECORDING));
         self.set_accels_for_action("app.shortcuts", &["<Control>question"]);
 
         self.set_accels_for_action("app.quit", &["<Control>q"]);
@@ -190,8 +211,28 @@ impl ClipperinoApplication {
                                 }
                             }
                         ));
-                        if let Err(e) = session.monitor(tx).await {
-                            tracing::error!("clipboard monitor stopped: {e}");
+                        let started = std::time::Instant::now();
+                        let monitor = std::pin::pin!(session.monitor(tx));
+                        let closed = std::pin::pin!(session.closed());
+                        match futures_util::future::select(monitor, closed).await {
+                            futures_util::future::Either::Left((Err(e), _)) => {
+                                tracing::error!("clipboard monitor stopped: {e}")
+                            }
+                            futures_util::future::Either::Left((Ok(()), _)) => {
+                                tracing::warn!("clipboard monitor ended")
+                            }
+                            futures_util::future::Either::Right(_) => {
+                                tracing::warn!("portal session closed")
+                            }
+                        }
+                        // Recording has stopped: say so instead of failing silently.
+                        window.clear_portal();
+                        // A session that ran a while was likely ended by a shell or
+                        // portal restart; the stored token reconnects silently. One
+                        // that died at once would only loop, so wait for the user.
+                        if started.elapsed() > RECONNECT_AFTER {
+                            glib::timeout_future_seconds(3).await;
+                            app.connect_portal(window);
                         }
                     }
                     Err(e) => {
@@ -219,13 +260,20 @@ impl ClipperinoApplication {
 
     /// Bind the global shortcut and toggle the window on every activation.
     fn bind_shortcut(&self) {
-        let (tx, rx) = async_channel::unbounded::<Option<String>>();
+        use crate::platform::shortcut::ShortcutEvent;
+        let (tx, rx) = async_channel::unbounded::<ShortcutEvent>();
         glib::spawn_future_local(glib::clone!(
             #[weak(rename_to = app)]
             self,
             async move {
-                while let Ok(token) = rx.recv().await {
-                    app.toggle_window(token.as_deref());
+                while let Ok(event) = rx.recv().await {
+                    match event {
+                        ShortcutEvent::Activated(token) => app.toggle_window(token.as_deref()),
+                        ShortcutEvent::Trigger(trigger) => {
+                            app.imp().shortcut.replace(trigger);
+                            app.schedule_tray_refresh();
+                        }
+                    }
                 }
             }
         ));
@@ -287,6 +335,14 @@ impl ClipperinoApplication {
                                 w.paste_from_tray(hash);
                             }
                         }
+                        TrayEvent::TogglePause => {
+                            let s = settings();
+                            s.set_boolean(
+                                settings::PAUSE_RECORDING,
+                                !s.boolean(settings::PAUSE_RECORDING),
+                            )
+                            .ok();
+                        }
                         TrayEvent::ClearHistory => app.confirm_clear_history(),
                         TrayEvent::Preferences => {
                             if let Some(w) = app.imp().window.get() {
@@ -317,9 +373,9 @@ impl ClipperinoApplication {
                     return;
                 }
                 let tx = tx.clone();
-                let items = app.tray_snapshot();
+                let state = app.tray_state();
                 glib::spawn_future_local(async move {
-                    match crate::platform::tray::spawn(tx, items).await {
+                    match crate::platform::tray::spawn(tx, state).await {
                         Ok(handle) => {
                             app.imp().tray.replace(Some(handle));
                             app.imp().tray_available.set(Some(true));
@@ -338,6 +394,14 @@ impl ClipperinoApplication {
         s.connect_changed(Some(settings::SHOW_TRAY_ICON), move |s, key| {
             apply(s.boolean(key))
         });
+        s.connect_changed(
+            Some(settings::PAUSE_RECORDING),
+            glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move |_, _| app.schedule_tray_refresh()
+            ),
+        );
 
         // Keep the menu in sync with the history, coalescing bursts of changes.
         if let Some(window) = self.imp().window.get() {
@@ -365,17 +429,26 @@ impl ClipperinoApplication {
                     let Some(handle) = app.imp().tray.borrow().clone() else {
                         return;
                     };
-                    let items = app.tray_snapshot();
+                    let state = app.tray_state();
                     glib::spawn_future_local(async move {
-                        handle.update(|t| t.items = items).await;
+                        handle.update(|t| t.state = state).await;
                     });
                 }
             ),
         );
     }
 
+    /// Everything the tray menu shows, as plain data for its thread.
+    fn tray_state(&self) -> crate::platform::tray::TrayState {
+        crate::platform::tray::TrayState {
+            items: self.tray_items(),
+            paused: settings().boolean(settings::PAUSE_RECORDING),
+            shortcut: self.shortcut().map(|t| t.keys),
+        }
+    }
+
     /// The recent clips as plain data for the tray menu.
-    fn tray_snapshot(&self) -> Vec<crate::platform::tray::TrayItem> {
+    fn tray_items(&self) -> Vec<crate::platform::tray::TrayItem> {
         use crate::{model::ClipKind, platform::tray};
         let Some(window) = self.imp().window.get() else {
             return Vec::new();
@@ -451,6 +524,11 @@ impl ClipperinoApplication {
         dialog.present(Some(window));
     }
 
+    /// The toggle shortcut as currently bound, if any.
+    pub fn shortcut(&self) -> Option<crate::platform::shortcut::Trigger> {
+        self.imp().shortcut.borrow().clone()
+    }
+
     /// `Some(false)` means the desktop has no tray host.
     pub fn tray_available(&self) -> Option<bool> {
         self.imp().tray_available.get()
@@ -484,6 +562,9 @@ impl ClipperinoApplication {
         dialog.present(self.active_window().as_ref());
     }
 }
+
+/// Reconnect automatically only when the lost session had run at least this long.
+const RECONNECT_AFTER: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// Clipperino was called Clipped before 1.1. Carry the history over once and
 /// drop the old login item, whose binary the package upgrade removed. Settings

@@ -1,7 +1,7 @@
 %global app_id io.github.djshiye.Clipperino
 
 Name:           clipperino
-Version:        1.1.0
+Version:        1.2.0
 Release:        1%{?dist}
 Summary:        Clipboard history manager for GNOME
 
@@ -67,6 +67,12 @@ export RUSTFLAGS="%{build_rustflags}"
 %{_datadir}/metainfo/%{app_id}.metainfo.xml
 
 %changelog
+* Tue Sep 29 2026 djshiye <dreamfantom16@gmail.com> - 1.2.0-1
+- Pause recording and automatic deletion of old unpinned clips
+- Paste copied files as files; search the full text of clips
+- Fix row menu actions after the list changes; wire the status icon switch
+- Reconnect or ask again when the clipboard permission session ends
+
 * Tue Sep 29 2026 djshiye <dreamfantom16@gmail.com> - 1.1.0-1
 - Rename from Clipped to Clipperino
 - Open the tray menu immediately on click

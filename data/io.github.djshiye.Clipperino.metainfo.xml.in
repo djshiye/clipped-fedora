@@ -37,6 +37,12 @@
     <display_length compare="ge">360</display_length>
   </requires>
   <releases>
+    <release version="1.2.0" date="2026-09-29">
+      <description>
+        <p>Pause recording, and optionally delete unpinned clips after a day, a week, 30 or 90 days. Copied files paste as files again, search finds text anywhere in a clip, and the same image copied from two apps is kept once. The status icon menu shows your actual shortcut and a Pause Recording toggle.</p>
+        <p>Fixes: row menu actions could target the wrong item after the list changed, the Show Status Icon switch did nothing, and recording stopped silently when GNOME ended the permission session.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-09-29">
       <description>
         <p>Clipped is now called Clipperino. History carries over automatically. The tray menu opens immediately on click.</p>

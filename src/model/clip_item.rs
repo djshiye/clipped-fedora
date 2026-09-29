@@ -92,10 +92,10 @@ impl ClipItem {
         item
     }
 
-    /// An image item. `width`/`height` are the full image size; the thumbnail
-    /// is set later via `set_thumbnail` once decoded off the main thread.
-    pub fn new_image(png: Vec<u8>, width: i32, height: i32) -> Self {
-        let hash = *blake3::hash(&png).as_bytes();
+    /// An image item. `hash` identifies the pixels (see `images::decode`), so
+    /// the same picture copied from two apps is one entry. `width`/`height`
+    /// are the full image size; the thumbnail is set by the caller.
+    pub fn new_image(png: Vec<u8>, hash: [u8; 32], width: i32, height: i32) -> Self {
         let item: Self = glib::Object::builder()
             .property("kind", ClipKind::Image)
             .property(
@@ -153,6 +153,55 @@ impl ClipItem {
     pub fn hash(&self) -> [u8; 32] {
         *self.imp().hash.borrow()
     }
+
+    /// The hash as hex: a stable key for menu actions, unlike a list position.
+    pub fn key(&self) -> String {
+        hex(&self.hash())
+    }
+
+    /// What search matches against: the preview (file names, image size)
+    /// plus the start of the full text. Borrowed, so huge clips are not
+    /// copied on every keystroke.
+    pub fn search_text(&self) -> String {
+        let text = self.imp().text.borrow();
+        let mut out = self.preview();
+        if let Some(t) = text.as_deref() {
+            out.push('\n');
+            out.push_str(prefix(t, SEARCH_MAX_BYTES));
+        }
+        out
+    }
+}
+
+/// How much of a clip's text search looks at.
+const SEARCH_MAX_BYTES: usize = 64 * 1024;
+
+/// The longest prefix of `s` within `max` bytes, cut on a character boundary.
+fn prefix(s: &str, max: usize) -> &str {
+    if s.len() <= max {
+        return s;
+    }
+    let mut end = max;
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
+pub fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// Inverse of `ClipItem::key`.
+pub fn parse_key(key: &str) -> Option<[u8; 32]> {
+    if key.len() != 64 || !key.is_ascii() {
+        return None;
+    }
+    let mut out = [0u8; 32];
+    for (i, b) in out.iter_mut().enumerate() {
+        *b = u8::from_str_radix(&key[i * 2..i * 2 + 2], 16).ok()?;
+    }
+    Some(out)
 }
 
 fn now() -> i64 {
@@ -186,5 +235,23 @@ mod tests {
         assert_eq!(p.graphemes(true).count(), PREVIEW_MAX_GRAPHEMES + 1);
         assert!(p.ends_with('…'));
         assert!(std::str::from_utf8(p.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn key_roundtrips() {
+        let item = ClipItem::new_text("hello".into());
+        assert_eq!(parse_key(&item.key()), Some(item.hash()));
+        assert_eq!(parse_key("zz"), None);
+        assert_eq!(parse_key(&"g".repeat(64)), None);
+    }
+
+    #[test]
+    fn search_covers_text_beyond_the_preview() {
+        let text = format!("{}needle", "word ".repeat(200));
+        let item = ClipItem::new_text(text);
+        assert!(!item.preview().contains("needle"));
+        assert!(item.search_text().contains("needle"));
+        let big = "é".repeat(SEARCH_MAX_BYTES);
+        assert!(prefix(&big, SEARCH_MAX_BYTES - 1).len() < SEARCH_MAX_BYTES);
     }
 }

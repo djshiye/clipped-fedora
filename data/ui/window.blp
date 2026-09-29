@@ -44,6 +44,13 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
       }
     }
 
+    [top]
+    Adw.Banner paused_banner {
+      title: _("Recording is paused");
+      button-label: _("Resume");
+      action-name: "app.pause-recording";
+    }
+
     content: Adw.ViewStack stack {
       Adw.ViewStackPage {
         name: "history";
@@ -226,6 +233,13 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
 }
 
 menu primary_menu {
+  section {
+    item {
+      label: _("_Pause Recording");
+      action: "app.pause-recording";
+    }
+  }
+
   section {
     item {
       label: _("_Preferences");

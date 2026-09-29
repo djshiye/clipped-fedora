@@ -1,17 +1,22 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use gtk::{gio, prelude::*};
 
 use super::ClipItem;
 use crate::storage::Storage;
 
+/// The history's change listener, shared with the per-item pin watchers.
+type OnChange = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
+
 /// A `gio::ListStore` of `ClipItem`s (newest first) with O(1) content dedupe.
 pub struct HistoryStore {
     model: gio::ListStore,
     by_hash: RefCell<HashMap<[u8; 32], ClipItem>>,
     max_items: RefCell<u32>,
-    storage: RefCell<Option<Storage>>,
-    on_change: RefCell<Option<std::rc::Rc<dyn Fn()>>>,
+    // Shared with the per-item pin watchers, which look both up when they
+    // fire: items restored at startup are watched before the tray registers.
+    storage: Rc<RefCell<Option<Storage>>>,
+    on_change: OnChange,
 }
 
 impl Default for HistoryStore {
@@ -26,13 +31,13 @@ impl HistoryStore {
             model: gio::ListStore::new::<ClipItem>(),
             by_hash: RefCell::new(HashMap::new()),
             max_items: RefCell::new(max_items),
-            storage: RefCell::new(None),
-            on_change: RefCell::new(None),
+            storage: Rc::default(),
+            on_change: Rc::default(),
         }
     }
 
     /// Called after any change (add, move, remove, clear, trim, pin).
-    pub fn set_on_change(&self, f: std::rc::Rc<dyn Fn()>) {
+    pub fn set_on_change(&self, f: Rc<dyn Fn()>) {
         self.on_change.replace(Some(f));
     }
 
@@ -70,13 +75,14 @@ impl HistoryStore {
     }
 
     fn watch_pinned(&self, item: &ClipItem) {
-        let storage = self.storage.borrow().clone();
-        let on_change = self.on_change.borrow().clone();
+        let storage = self.storage.clone();
+        let on_change = self.on_change.clone();
         item.connect_pinned_notify(move |it| {
-            if let Some(s) = &storage {
+            if let Some(s) = storage.borrow().as_ref() {
                 s.set_pinned(it.hash(), it.pinned());
             }
-            if let Some(f) = &on_change {
+            let f = on_change.borrow().clone();
+            if let Some(f) = f {
                 f();
             }
         });
@@ -195,6 +201,34 @@ impl HistoryStore {
         self.trim();
     }
 
+    /// Drop unpinned items last used before `cutoff` (Unix seconds).
+    /// Returns how many were removed.
+    pub fn expire_before(&self, cutoff: i64) -> u32 {
+        let mut removed = 0;
+        let mut i = self.model.n_items();
+        while i > 0 {
+            i -= 1;
+            let item = self.model.item(i).and_downcast::<ClipItem>().unwrap();
+            if !item.pinned() && item.timestamp() < cutoff {
+                self.model.remove(i);
+                self.forget(&item);
+                removed += 1;
+            }
+        }
+        if removed > 0 {
+            self.changed();
+        }
+        removed
+    }
+
+    /// Drop an item that is already out of the model, image file included.
+    fn forget(&self, item: &ClipItem) {
+        self.by_hash.borrow_mut().remove(&item.hash());
+        if let Some(s) = self.storage.borrow().as_ref() {
+            s.remove(item.hash(), item.image_path().map(Into::into));
+        }
+    }
+
     fn position_of(&self, item: &ClipItem) -> Option<u32> {
         self.model.find(item)
     }
@@ -208,10 +242,7 @@ impl HistoryStore {
             let item = self.model.item(i).and_downcast::<ClipItem>().unwrap();
             if !item.pinned() {
                 self.model.remove(i);
-                self.by_hash.borrow_mut().remove(&item.hash());
-                if let Some(s) = self.storage.borrow().as_ref() {
-                    s.remove(item.hash(), item.image_path().map(Into::into));
-                }
+                self.forget(&item);
             }
         }
     }
@@ -246,5 +277,33 @@ mod tests {
         }
         assert_eq!(s.len(), 3);
         assert!(s.contains_hash(&p.hash()));
+    }
+
+    #[test]
+    fn expire_keeps_pinned_and_recent() {
+        let s = HistoryStore::new(10);
+        let old = s.add(ClipItem::new_text("old".into()));
+        old.set_timestamp(100);
+        let old_pinned = s.add(ClipItem::new_text("old pinned".into()));
+        old_pinned.set_timestamp(100);
+        old_pinned.set_pinned(true);
+        let fresh = s.add(ClipItem::new_text("fresh".into()));
+        fresh.set_timestamp(1000);
+        assert_eq!(s.expire_before(500), 1);
+        assert!(!s.contains_hash(&old.hash()));
+        assert!(s.contains_hash(&old_pinned.hash()));
+        assert!(s.contains_hash(&fresh.hash()));
+    }
+
+    #[test]
+    fn pin_notifies_items_added_before_the_callback() {
+        let s = store();
+        let item = ClipItem::new_text("restored".into());
+        s.append_restored(item.clone());
+        let hits = Rc::new(std::cell::Cell::new(0));
+        let h = hits.clone();
+        s.set_on_change(Rc::new(move || h.set(h.get() + 1)));
+        item.set_pinned(true);
+        assert_eq!(hits.get(), 1);
     }
 }

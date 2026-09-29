@@ -36,6 +36,25 @@ template $ClipperinoPreferences : Adw.PreferencesDialog {
         };
       }
 
+      Adw.ComboRow expire_row {
+        title: _("Delete Unpinned Items");
+        subtitle: _("Pinned items are never deleted automatically");
+        model: StringList {
+          strings [
+            _("Never"),
+            _("After 1 Day"),
+            _("After 1 Week"),
+            _("After 30 Days"),
+            _("After 90 Days"),
+          ]
+        };
+      }
+
+      Adw.SwitchRow pause_row {
+        title: _("Pause Recording");
+        subtitle: _("Copies are not saved while paused, for example when handling passwords");
+      }
+
       Adw.SwitchRow paste_on_select_row {
         title: _("Paste on Select");
         subtitle: _("Selecting an item pastes it into the previous app");

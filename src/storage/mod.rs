@@ -10,7 +10,7 @@ use std::{
 
 use rusqlite::{Connection, params};
 
-use crate::model::ClipKind;
+use crate::model::{ClipKind, hex};
 
 #[derive(Debug, Clone)]
 pub struct Record {
@@ -252,10 +252,6 @@ fn prune_orphans(images_dir: &Path, records: &[Record]) {
     if removed > 0 {
         tracing::info!(removed, "pruned orphan image files");
     }
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// One-time import of the legacy `clipman` text history (`---ENTRY---`

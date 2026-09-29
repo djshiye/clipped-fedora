@@ -11,6 +11,17 @@
       <default>true</default>
       <summary>Paste into the previous app when an item is selected</summary>
     </key>
+    <key name="pause-recording" type="b">
+      <default>false</default>
+      <summary>Pause recording</summary>
+      <description>While set, copied content is not added to the history.</description>
+    </key>
+    <key name="expire-days" type="u">
+      <range min="0" max="365"/>
+      <default>0</default>
+      <summary>Delete unpinned entries after this many days</summary>
+      <description>0 keeps entries until the history limit removes them.</description>
+    </key>
     <key name="run-in-background" type="b">
       <default>true</default>
       <summary>Start at login and keep recording while the window is closed</summary>

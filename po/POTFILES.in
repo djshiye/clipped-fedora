@@ -9,6 +9,7 @@ src/application.rs
 src/model/clip_item.rs
 src/model/glyph.rs
 src/platform/shortcut.rs
+src/platform/tray.rs
 src/preferences.rs
 src/ui/detail_dialog.rs
 src/ui/glyph_page.rs

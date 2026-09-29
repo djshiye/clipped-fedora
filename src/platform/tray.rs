@@ -2,7 +2,10 @@
 //! clips are the menu, one click pastes. This is the macOS menu-bar pattern
 //! and, on Wayland, the only popup an app can anchor to the panel.
 
-use ksni::{MenuItem, Tray, TrayMethods, menu::StandardItem};
+use ksni::{
+    MenuItem, Tray, TrayMethods,
+    menu::{CheckmarkItem, StandardItem},
+};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{config, i18n::gettext};
@@ -15,6 +18,7 @@ const LABEL_MAX_GRAPHEMES: usize = 44;
 pub enum TrayEvent {
     Toggle,
     Paste([u8; 32]),
+    TogglePause,
     ClearHistory,
     Preferences,
     Quit,
@@ -38,9 +42,18 @@ pub struct TrayItem {
     pub icon_png: Option<Vec<u8>>,
 }
 
+/// Everything the menu shows, snapshotted on the main thread.
+#[derive(Debug, Clone, Default)]
+pub struct TrayState {
+    pub items: Vec<TrayItem>,
+    pub paused: bool,
+    /// dbusmenu keys of the bound shortcut, e.g. ["Super", "Shift", "v"].
+    pub shortcut: Option<Vec<String>>,
+}
+
 pub struct ClipperinoTray {
     tx: async_channel::Sender<TrayEvent>,
-    pub items: Vec<TrayItem>,
+    pub state: TrayState,
 }
 
 impl ClipperinoTray {
@@ -78,7 +91,11 @@ impl Tray for ClipperinoTray {
     fn tool_tip(&self) -> ksni::ToolTip {
         ksni::ToolTip {
             title: config::APP_NAME.into(),
-            description: gettext("Click for recent clips"),
+            description: if self.state.paused {
+                gettext("Recording paused")
+            } else {
+                gettext("Click for recent clips")
+            },
             ..Default::default()
         }
     }
@@ -88,7 +105,8 @@ impl Tray for ClipperinoTray {
     }
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
-        let mut menu: Vec<MenuItem<Self>> = Vec::with_capacity(self.items.len() + 8);
+        let items = &self.state.items;
+        let mut menu: Vec<MenuItem<Self>> = Vec::with_capacity(items.len() + 10);
 
         let header = |label: String| -> MenuItem<Self> {
             StandardItem {
@@ -118,8 +136,8 @@ impl Tray for ClipperinoTray {
         };
 
         let (pinned, recent): (Vec<&TrayItem>, Vec<&TrayItem>) =
-            self.items.iter().partition(|i| i.pinned);
-        if self.items.is_empty() {
+            items.iter().partition(|i| i.pinned);
+        if items.is_empty() {
             menu.push(header(gettext("No clips yet. Copy something.")));
         }
         if !pinned.is_empty() {
@@ -137,8 +155,17 @@ impl Tray for ClipperinoTray {
             StandardItem {
                 label: gettext("Open Clipperino"),
                 icon_name: "edit-paste-symbolic".into(),
-                shortcut: vec![vec!["Super".into(), "Shift".into(), "v".into()]],
+                shortcut: self.state.shortcut.clone().into_iter().collect(),
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::Toggle)),
+                ..Default::default()
+            }
+            .into(),
+        );
+        menu.push(
+            CheckmarkItem {
+                label: gettext("Pause Recording"),
+                checked: self.state.paused,
+                activate: Box::new(|t: &mut Self| t.send(TrayEvent::TogglePause)),
                 ..Default::default()
             }
             .into(),
@@ -147,7 +174,7 @@ impl Tray for ClipperinoTray {
             StandardItem {
                 label: gettext("Clear History…"),
                 icon_name: "edit-clear-all-symbolic".into(),
-                enabled: !self.items.is_empty(),
+                enabled: !items.is_empty(),
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::ClearHistory)),
                 ..Default::default()
             }
@@ -180,9 +207,9 @@ impl Tray for ClipperinoTray {
 /// there is no StatusNotifierWatcher on the session bus.
 pub async fn spawn(
     tx: async_channel::Sender<TrayEvent>,
-    items: Vec<TrayItem>,
+    state: TrayState,
 ) -> Result<ksni::Handle<ClipperinoTray>, ksni::Error> {
-    ClipperinoTray { tx, items }.spawn().await
+    ClipperinoTray { tx, state }.spawn().await
 }
 
 #[cfg(test)]

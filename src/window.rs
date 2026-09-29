@@ -45,6 +45,8 @@ mod imp {
         pub preview_picture: TemplateChild<gtk::Picture>,
         #[template_child]
         pub preview_meta: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub paused_banner: TemplateChild<adw::Banner>,
 
         pub history: HistoryStore,
         pub filter: RefCell<Option<gtk::StringFilter>>,
@@ -52,6 +54,10 @@ mod imp {
         pub selection: RefCell<Option<gtk::SingleSelection>>,
         pub preview_binding: RefCell<Option<glib::Binding>>,
         pub portal: Rc<RefCell<Option<Rc<PortalSession>>>>,
+        /// Every row the factory created (rows are recycled, so this stays
+        /// small); the clock ticks their relative times.
+        pub rows: RefCell<Vec<glib::WeakRef<HistoryRow>>>,
+        pub clock: RefCell<Option<glib::SourceId>>,
     }
 
     #[glib::object_subclass]
@@ -80,6 +86,8 @@ mod imp {
             obj.load_history();
             obj.setup_glyph_pages();
             obj.setup_settings();
+            obj.setup_clock();
+            obj.setup_expiry();
             obj.update_empty_state();
         }
     }
@@ -108,9 +116,13 @@ impl ClipperinoWindow {
     fn setup_list(&self) {
         let imp = self.imp();
 
-        // history (ListStore) -> StringFilter on "preview" -> SingleSelection -> ListView
-        let expr =
-            gtk::PropertyExpression::new(ClipItem::static_type(), gtk::Expression::NONE, "preview");
+        // history (ListStore) -> StringFilter on the clip's text -> SingleSelection -> ListView
+        let expr = gtk::ClosureExpression::with_callback(&[] as &[gtk::Expression], |args| {
+            args[0]
+                .get::<ClipItem>()
+                .map(|item| item.search_text())
+                .unwrap_or_default()
+        });
         let filter = gtk::StringFilter::builder()
             .expression(&expr)
             .ignore_case(true)
@@ -126,15 +138,21 @@ impl ClipperinoWindow {
             .build();
 
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(|_, item| {
-            let item = item.downcast_ref::<gtk::ListItem>().unwrap();
-            item.set_child(Some(&HistoryRow::default()));
-        });
+        factory.connect_setup(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |_, item| {
+                let item = item.downcast_ref::<gtk::ListItem>().unwrap();
+                let row = HistoryRow::default();
+                win.imp().rows.borrow_mut().push(row.downgrade());
+                item.set_child(Some(&row));
+            }
+        ));
         factory.connect_bind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().unwrap();
             let row = item.child().and_downcast::<HistoryRow>().unwrap();
             let clip = item.item().and_downcast::<ClipItem>().unwrap();
-            row.bind(&clip, item.position());
+            row.bind(&clip);
         });
         factory.connect_unbind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().unwrap();
@@ -208,6 +226,11 @@ impl ClipperinoWindow {
                 imp.preview_stack.set_visible_child_name("text");
             }
         }
+        imp.preview_meta.set_label(&self.preview_caption(item));
+    }
+
+    /// "5 min ago · 120 characters"
+    fn preview_caption(&self, item: &ClipItem) -> String {
         let when = crate::ui::relative_time(item.timestamp());
         let size = match item.kind() {
             ClipKind::Image => item.preview(),
@@ -216,7 +239,7 @@ impl ClipperinoWindow {
                 gettext("{chars} characters").replace("{chars}", &text.chars().count().to_string())
             }
         };
-        imp.preview_meta.set_label(&format!("{when} · {size}"));
+        format!("{when} · {size}")
     }
 
     fn setup_glyph_pages(&self) {
@@ -266,6 +289,13 @@ impl ClipperinoWindow {
                 }
             ),
         );
+        s.bind(
+            settings::PAUSE_RECORDING,
+            &*self.imp().paused_banner,
+            "revealed",
+        )
+        .get()
+        .build();
         let (w, h) = (
             s.int(settings::WINDOW_WIDTH),
             s.int(settings::WINDOW_HEIGHT),
@@ -291,6 +321,96 @@ impl ClipperinoWindow {
             win.hide_window();
             glib::Propagation::Stop
         });
+    }
+
+    /// While the window is shown, keep "5 min ago" labels current; refresh
+    /// at once on show, since rows are not rebound while hidden.
+    fn setup_clock(&self) {
+        self.connect_map(|win| {
+            win.refresh_times();
+            let id = glib::timeout_add_seconds_local(
+                30,
+                glib::clone!(
+                    #[weak]
+                    win,
+                    #[upgrade_or]
+                    glib::ControlFlow::Break,
+                    move || {
+                        win.refresh_times();
+                        glib::ControlFlow::Continue
+                    }
+                ),
+            );
+            if let Some(old) = win.imp().clock.replace(Some(id)) {
+                old.remove();
+            }
+        });
+        self.connect_unmap(|win| {
+            if let Some(id) = win.imp().clock.take() {
+                id.remove();
+            }
+        });
+    }
+
+    fn refresh_times(&self) {
+        let imp = self.imp();
+        imp.rows.borrow_mut().retain(|r| match r.upgrade() {
+            Some(row) => {
+                row.refresh_time();
+                true
+            }
+            None => false,
+        });
+        // Only the time in the preview caption; re-setting the text would
+        // drop the user's selection in it.
+        if let Some((_, item)) = self.selected_item() {
+            imp.preview_meta.set_label(&self.preview_caption(&item));
+        }
+    }
+
+    /// Delete unpinned clips older than the "expire-days" setting: at startup,
+    /// hourly, and when the setting changes.
+    fn setup_expiry(&self) {
+        self.expire_old();
+        settings().connect_changed(
+            Some(settings::EXPIRE_DAYS),
+            glib::clone!(
+                #[weak(rename_to = win)]
+                self,
+                move |_, _| win.expire_old()
+            ),
+        );
+        glib::timeout_add_seconds_local(
+            3600,
+            glib::clone!(
+                #[weak(rename_to = win)]
+                self,
+                #[upgrade_or]
+                glib::ControlFlow::Break,
+                move || {
+                    win.expire_old();
+                    glib::ControlFlow::Continue
+                }
+            ),
+        );
+    }
+
+    fn expire_old(&self) {
+        let days = settings().uint(settings::EXPIRE_DAYS);
+        if days == 0 {
+            return;
+        }
+        let now = glib::DateTime::now_local()
+            .map(|d| d.to_unix())
+            .unwrap_or_default();
+        let removed = self
+            .imp()
+            .history
+            .expire_before(now - i64::from(days) * 86_400);
+        if removed > 0 {
+            tracing::info!(removed, days, "expired old clips");
+            self.update_empty_state();
+        }
     }
 
     pub fn clear_history(&self) {
@@ -365,39 +485,26 @@ impl ClipperinoWindow {
     }
 
     fn setup_actions(&self) {
-        let copy = gio::ActionEntry::builder("copy-item")
-            .parameter_type(Some(&u32::static_variant_type()))
-            .activate(|win: &Self, _, param| {
-                if let Some(item) = param
-                    .and_then(|p| p.get::<u32>())
-                    .and_then(|p| win.item_at(p))
-                {
-                    win.copy_item(&item);
-                }
-            })
-            .build();
-        let pin = gio::ActionEntry::builder("pin-item")
-            .parameter_type(Some(&u32::static_variant_type()))
-            .activate(|win: &Self, _, param| {
-                if let Some(item) = param
-                    .and_then(|p| p.get::<u32>())
-                    .and_then(|p| win.item_at(p))
-                {
-                    item.set_pinned(!item.pinned());
-                }
-            })
-            .build();
-        let delete = gio::ActionEntry::builder("delete-item")
-            .parameter_type(Some(&u32::static_variant_type()))
-            .activate(|win: &Self, _, param| {
-                if let Some(item) = param
-                    .and_then(|p| p.get::<u32>())
-                    .and_then(|p| win.item_at(p))
-                {
-                    win.delete_item(&item);
-                }
-            })
-            .build();
+        // Row menu actions: the target is the item's key (see `ClipItem::key`).
+        let by_key = |name: &str, run: fn(&Self, &ClipItem)| {
+            gio::ActionEntry::builder(name)
+                .parameter_type(Some(&String::static_variant_type()))
+                .activate(move |win: &Self, _, param| {
+                    if let Some(item) = param
+                        .and_then(|p| p.get::<String>())
+                        .and_then(|k| crate::model::parse_key(&k))
+                        .and_then(|h| win.imp().history.find_by_hash(&h))
+                    {
+                        run(win, &item);
+                    }
+                })
+                .build()
+        };
+        let paste = by_key("paste-item", |win, item| win.activate_item(item));
+        let copy = by_key("copy-item", |win, item| win.copy_item(item));
+        let pin = by_key("pin-item", |_, item| item.set_pinned(!item.pinned()));
+        let delete = by_key("delete-item", |win, item| win.delete_item(item));
+        let show_item = by_key("show-item", |win, item| win.show_details(item));
         let delete_selected = gio::ActionEntry::builder("delete-selected")
             .activate(|win: &Self, _, _| {
                 if let Some((_, item)) = win.selected_item() {
@@ -420,17 +527,6 @@ impl ClipperinoWindow {
                     .and_then(|p| win.item_at(p))
                 {
                     win.activate_item(&item);
-                }
-            })
-            .build();
-        let show_item = gio::ActionEntry::builder("show-item")
-            .parameter_type(Some(&u32::static_variant_type()))
-            .activate(|win: &Self, _, param| {
-                if let Some(item) = param
-                    .and_then(|p| p.get::<u32>())
-                    .and_then(|p| win.item_at(p))
-                {
-                    win.show_details(&item);
                 }
             })
             .build();
@@ -466,6 +562,7 @@ impl ClipperinoWindow {
             .activate(|win: &Self, _, _| win.focus_search())
             .build();
         self.add_action_entries([
+            paste,
             copy,
             pin,
             delete,
@@ -639,28 +736,13 @@ impl ClipperinoWindow {
         let Some(item) = self.imp().history.find_by_hash(&hash) else {
             return;
         };
-        let Some(portal) = self.imp().portal.borrow().clone() else {
-            return;
+        let then = if settings().boolean(settings::PASTE_ON_SELECT) {
+            // Let the panel menu close and focus settle first.
+            After::Paste(TRAY_PASTE_DELAY)
+        } else {
+            After::Nothing
         };
-        let item = self.imp().history.add(item);
-        let paste = settings().boolean(settings::PASTE_ON_SELECT);
-        glib::spawn_future_local(async move {
-            let Some(offer) = offer_for(&item).await else {
-                return;
-            };
-            if let Err(e) = portal.offer(offer).await {
-                tracing::warn!("could not set clipboard: {e}");
-                return;
-            }
-            if paste {
-                // Let the panel menu close and focus settle first.
-                glib::timeout_future(std::time::Duration::from_millis(350)).await;
-                match portal.inject_paste().await {
-                    Ok(()) => tracing::info!("paste injected (tray)"),
-                    Err(e) => tracing::warn!("paste injection failed: {e}"),
-                }
-            }
-        });
+        self.deliver(&item, then);
     }
 
     /// Hide, remembering the size (Escape and paste paths do not emit close-request).
@@ -673,24 +755,41 @@ impl ClipperinoWindow {
     }
 
     fn copy_item(&self, item: &ClipItem) {
+        self.deliver(item, After::Toast);
+    }
+
+    /// Move `item` to the top of the history, put it on the clipboard, then
+    /// do `then`. The single path for copy, paste and tray actions.
+    fn deliver(&self, item: &ClipItem, then: After) {
         let Some(portal) = self.imp().portal.borrow().clone() else {
+            tracing::warn!("no portal session; cannot set the clipboard");
             return;
         };
-        self.imp().history.add(item.clone());
+        let item = self.imp().history.add(item.clone());
         let overlay = self.imp().toast_overlay.get();
-        let item = item.clone();
         glib::spawn_future_local(async move {
             let Some(offer) = offer_for(&item).await else {
                 return;
             };
-            match portal.offer(offer).await {
-                Ok(()) => overlay.add_toast(
+            if let Err(e) = portal.offer(offer).await {
+                tracing::warn!("could not set clipboard: {e}");
+                return;
+            }
+            match then {
+                After::Nothing => {}
+                After::Toast => overlay.add_toast(
                     adw::Toast::builder()
                         .title(gettext("Copied"))
                         .timeout(2)
                         .build(),
                 ),
-                Err(e) => tracing::warn!("could not set clipboard: {e}"),
+                After::Paste(delay) => {
+                    glib::timeout_future(delay).await;
+                    match portal.inject_paste().await {
+                        Ok(()) => tracing::info!("paste injected"),
+                        Err(e) => tracing::warn!("paste injection failed: {e}"),
+                    }
+                }
             }
         });
     }
@@ -780,6 +879,12 @@ impl ClipperinoWindow {
         self.imp().grant_button.get()
     }
 
+    /// The session ended: stop offering copy and paste, ask for access again.
+    pub fn clear_portal(&self) {
+        self.imp().portal.replace(None);
+        self.show_permission_page();
+    }
+
     pub fn set_portal(&self, portal: Rc<PortalSession>) {
         self.imp().portal.replace(Some(portal));
         self.imp().history_stack.set_visible_child_name("empty");
@@ -787,6 +892,10 @@ impl ClipperinoWindow {
     }
 
     pub fn handle_clip_event(&self, event: ClipEvent) {
+        if settings().boolean(settings::PAUSE_RECORDING) {
+            tracing::debug!("recording paused; clip ignored");
+            return;
+        }
         let item = match event {
             ClipEvent::Text(text) => ClipItem::new_text(text),
             ClipEvent::Image { bytes, .. } => {
@@ -802,7 +911,8 @@ impl ClipperinoWindow {
                         .await;
                         match decoded {
                             Ok(Ok(d)) => {
-                                let item = ClipItem::new_image(bytes, d.width, d.height);
+                                let item =
+                                    ClipItem::new_image(bytes, d.pixel_hash, d.width, d.height);
                                 item.set_thumbnail(Some(d.thumbnail));
                                 let item = win.imp().history.add(item);
                                 tracing::info!(kind = ?item.kind(), total = win.imp().history.len(), "clip added");
@@ -827,35 +937,19 @@ impl ClipperinoWindow {
     /// previously focused app.
     fn activate_item(&self, item: &ClipItem) {
         tracing::info!(kind = ?item.kind(), "item activated");
-        let Some(portal) = self.imp().portal.borrow().clone() else {
+        if self.imp().portal.borrow().is_none() {
+            // Stay visible: the permission page explains what is missing.
             tracing::warn!("no portal session; cannot paste");
-            return;
-        };
-        self.imp().history.add(item.clone());
-        let paste = settings().boolean(settings::PASTE_ON_SELECT);
-        if !paste {
-            // Copy-and-close: the toast would be invisible after hiding, so hide only.
-            self.copy_item(item);
-            self.hide_window();
             return;
         }
         self.hide_window();
-        let item = item.clone();
-        glib::spawn_future_local(async move {
-            let Some(offer) = offer_for(&item).await else {
-                return;
-            };
-            if let Err(e) = portal.offer(offer).await {
-                tracing::warn!("could not set clipboard: {e}");
-                return;
-            }
+        let then = if settings().boolean(settings::PASTE_ON_SELECT) {
             // Give the compositor time to hand focus back to the previous window.
-            glib::timeout_future(std::time::Duration::from_millis(250)).await;
-            match portal.inject_paste().await {
-                Ok(()) => tracing::info!("paste injected"),
-                Err(e) => tracing::warn!("paste injection failed: {e}"),
-            }
-        });
+            After::Paste(WINDOW_PASTE_DELAY)
+        } else {
+            After::Nothing
+        };
+        self.deliver(item, then);
     }
 
     pub fn focus_search(&self) {
@@ -890,6 +984,21 @@ async fn offer_for(item: &ClipItem) -> Option<Offer> {
                 }
             }
         }
-        _ => item.text().map(Offer::Text),
+        ClipKind::Files => item
+            .text()
+            .map(|t| Offer::Files(t.lines().map(str::to_owned).collect())),
+        ClipKind::Text => item.text().map(Offer::Text),
     }
 }
+
+/// What `deliver` does once the clipboard is set.
+enum After {
+    Nothing,
+    Toast,
+    Paste(std::time::Duration),
+}
+
+/// Delay before pressing Ctrl+V, so focus is back in the target app. The
+/// tray needs longer: the panel menu has to close first.
+const WINDOW_PASTE_DELAY: std::time::Duration = std::time::Duration::from_millis(250);
+const TRAY_PASTE_DELAY: std::time::Duration = std::time::Duration::from_millis(350);
