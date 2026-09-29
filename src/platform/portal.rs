@@ -106,6 +106,10 @@ impl Offer {
     }
 }
 
+thread_local! {
+    static HOST_APP_REGISTERED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 pub struct PortalSession {
     rd: RemoteDesktop,
     clip: Clipboard,
@@ -118,8 +122,13 @@ impl PortalSession {
     /// Registers our identity, opens the session and starts it. Shows GNOME's
     /// permission dialog the first time; silent afterwards thanks to the token.
     pub async fn connect(restore_token: Option<String>) -> ashpd::Result<Self> {
-        let app_id = ashpd::AppID::try_from(config::APP_ID).expect("valid app id");
-        ashpd::register_host_app(app_id).await?;
+        // The portal accepts one registration per D-Bus connection; repeating
+        // it on a reconnect fails with "already associated".
+        if !HOST_APP_REGISTERED.get() {
+            let app_id = ashpd::AppID::try_from(config::APP_ID).expect("valid app id");
+            ashpd::register_host_app(app_id).await?;
+            HOST_APP_REGISTERED.set(true);
+        }
 
         let rd = RemoteDesktop::new().await?;
         let session = rd.create_session(CreateSessionOptions::default()).await?;

@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.3.2 (2026-09-29)
 
+- **Fix:** after GNOME ended the clipboard permission session, Clipperino
+  could not reconnect: the automatic retry and the Grant Access button both
+  failed until the app was restarted, and nothing was recorded meanwhile.
 - **Flatpak**: a manifest in `build-aux/flatpak`, and tagged releases attach
   a `.flatpak` bundle built on the GNOME 50 runtime. The status icon works
   inside the sandbox.

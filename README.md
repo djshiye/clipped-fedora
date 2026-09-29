@@ -145,9 +145,9 @@ since Flatpak builds are offline.
 ### Build the RPM
 
 ```bash
-cargo vendor vendor && tar -cJf clipperino-1.3.1-vendor.tar.xz vendor
-# source tarball named clipperino-1.3.1.tar.gz with a clipperino-1.3.1/ prefix
-rpmdev-setuptree && cp clipperino-1.3.1*.tar.* ~/rpmbuild/SOURCES/
+cargo vendor vendor && tar -cJf clipperino-1.3.2-vendor.tar.xz vendor
+# source tarball named clipperino-1.3.2.tar.gz with a clipperino-1.3.2/ prefix
+rpmdev-setuptree && cp clipperino-1.3.2*.tar.* ~/rpmbuild/SOURCES/
 rpmbuild -ba build-aux/clipperino.spec
 ```
 

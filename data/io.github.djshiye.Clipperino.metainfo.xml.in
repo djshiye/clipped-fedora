@@ -51,6 +51,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="1.3.2" date="2026-09-29">
+      <description>
+        <p>Fixes recording staying off after GNOME ended the clipboard permission session: Clipperino now reconnects on its own, and the Grant Access button works again. Adds a Flatpak build and screenshots for software centres.</p>
+      </description>
+    </release>
     <release version="1.3.1" date="2026-09-29">
       <description>
         <p>A tidier status icon menu: fewer and shorter rows, no section headers, and icons only for pinned clips and images. Image thumbnails are cropped to fill their icon, and images are labelled by the time they were copied. Clear History moved to Preferences only.</p>

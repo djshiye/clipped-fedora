@@ -5,7 +5,8 @@ users are in the README.
 
 ## Status (2026-09-29)
 
-Done, on `main` since commit 6ad6d08, not yet in a release:
+Done, on `main` since commit 6ad6d08, shipped with release 1.3.2 (the
+`.flatpak` bundle attached to it has not been tested in the real session):
 
 - Manifest: `build-aux/flatpak/io.github.djshiye.Clipperino.yml`, GNOME 50
   runtime (same GTK 4.22 / libadwaita 1.9 as Fedora 44), rust-stable 25.08.
@@ -74,12 +75,11 @@ flatpak uninstall --user io.github.djshiye.Clipperino
 clipperino &   # the native app reclaims the login item on start
 ```
 
-### 2. Release 1.3.2
+### 2. Release
 
-Rename `## Unreleased` in CHANGELOG.md to `## 1.3.2 (<date>)` and bump the
-version everywhere (Cargo.toml, Cargo.lock, meson.build, metainfo release
-entry, man page, spec Version and %changelog, README tarball names). Then
-tag `v1.3.2`. Check that the release carries the `.flatpak` bundle.
+Done: 1.3.2 was released for a reconnect fix and carries the Flatpak job.
+Check that the v1.3.2 release has the `.flatpak` bundle. If the real-session
+test finds problems, fix them in a later release and use that tag below.
 
 ### 3. Submit to Flathub
 
