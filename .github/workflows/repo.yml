@@ -35,7 +35,7 @@ jobs:
           # so a future Fedora gets its own directory.
           DIR=site/fedora/44/x86_64
           mkdir -p "$DIR"
-          gh release download --repo "$GITHUB_REPOSITORY" --pattern '*.fc44.x86_64.rpm' --dir "$DIR"
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern 'clipperino-[0-9]*.fc44.x86_64.rpm' --dir "$DIR"
           createrepo_c "$DIR"
           BASE="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
           # Packages are unsigned; HTTPS from GitHub Pages is the trust anchor.

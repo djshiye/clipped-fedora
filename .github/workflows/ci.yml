@@ -104,7 +104,7 @@ jobs:
           mkdir upload
           cp assets/clipperino-sources/* upload/
           # Fedora 44 is the supported release; Rawhide builds stay CI-only.
-          cp assets/clipperino-rpm-fedora-44/*.rpm upload/
+          cp assets/clipperino-rpm-fedora-44/clipperino-[0-9]*.rpm upload/
           gh release create "$GITHUB_REF_NAME" upload/* \
             --repo "$GITHUB_REPOSITORY" \
             --title "Clipperino $VERSION" \
