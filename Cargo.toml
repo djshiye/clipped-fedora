@@ -38,3 +38,8 @@ lto = "thin"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# ksni without the `Activate` method, so GNOME opens the tray menu instantly
+# (see third_party/ksni/src/dbus_interface.rs).
+[patch.crates-io]
+ksni = { path = "third_party/ksni" }
