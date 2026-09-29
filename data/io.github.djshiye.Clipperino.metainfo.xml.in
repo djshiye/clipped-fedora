@@ -36,6 +36,20 @@
   <requires>
     <display_length compare="ge">360</display_length>
   </requires>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/djshiye/clipperino/main/data/screenshots/history.png</image>
+      <caption>Clipboard history grouped by day, with link, colour and image previews</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/djshiye/clipperino/main/data/screenshots/images.png</image>
+      <caption>The Images filter shows copied pictures as a gallery</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/djshiye/clipperino/main/data/screenshots/emoji.png</image>
+      <caption>Emoji picker with categories and search</caption>
+    </screenshot>
+  </screenshots>
   <releases>
     <release version="1.3.1" date="2026-09-29">
       <description>

@@ -50,7 +50,7 @@ shell extension, or on the app having focus.
 - **Symbol picker**: math, arrows, currency, punctuation, keyboard, geometric, Greek and more.
 - **Adaptive layout**: tabs at the bottom on a narrow window; list plus a live preview pane when the window is wider than 700 px.
 - **Runs in the background** and **starts at login** (Preferences › Run in Background).
-- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips, in a Pinned section and a Recent section, with thumbnails for images and a folder icon for files. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipperino (with your current shortcut), Pause Recording, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; Preferences says so when no tray exists.
+- **Quick access from the panel**: the status icon opens a compact menu of your eight most recent clips, pinned ones first, with square thumbnails for images. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipperino, Pause Recording, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; Preferences says so when no tray exists.
 - **Privacy**: entries flagged by password managers are skipped, clipboard content is never logged, and the history file is private to your user. **Pause Recording** (main menu, panel menu or Preferences) stops saving copies until you resume, and unpinned items can be deleted automatically after a day, a week, 30 or 90 days.
 - Follows the system light/dark style and accent colour.
 
@@ -85,6 +85,20 @@ also download the RPM from the [latest release](https://github.com/djshiye/Clipp
 and install it with `sudo dnf install ./clipperino-*.rpm`, but then it won't
 receive updates.
 
+## Install (Flatpak, any distribution)
+
+Each release from 1.3.2 on carries a Flatpak bundle, which brings its own
+GTK and libadwaita through the GNOME 50 runtime:
+
+```bash
+flatpak install --user ./clipperino-<version>.x86_64.flatpak
+```
+
+The Flatpak behaves like the native app. It keeps its own history and
+settings in `~/.var/app/io.github.djshiye.Clipperino`, so it starts empty.
+Install one or the other: both use the same app ID, so the one installed
+last takes over the app grid and the login item.
+
 ### First run
 
 Launch **Clipperino** from the app grid. GNOME asks two things, once:
@@ -101,7 +115,7 @@ icon in the panel tray.
 
 Fedora 44 or newer with GNOME (GTK 4.22, libadwaita 1.9, `xdg-desktop-portal-gnome`).
 Other desktops need a portal backend that implements RemoteDesktop with
-Clipboard, and GlobalShortcuts.
+Clipboard, and GlobalShortcuts (KDE Plasma 6.4 or newer should, untested).
 
 ## Build from source
 
@@ -116,6 +130,17 @@ sudo meson install -C builddir
 For development, `cargo run` works without installing, as long as a desktop file
 for `io.github.djshiye.Clipperino` exists in `~/.local/share/applications`, because
 the portals identify apps by their desktop entry.
+
+### Build the Flatpak
+
+```bash
+flatpak-builder --user --install --force-clean build-flatpak \
+    build-aux/flatpak/io.github.djshiye.Clipperino.yml
+```
+
+After changing `Cargo.lock`, regenerate `build-aux/flatpak/cargo-sources.json`
+with [flatpak-cargo-generator](https://github.com/flatpak/flatpak-builder-tools/tree/master/cargo),
+since Flatpak builds are offline.
 
 ### Build the RPM
 

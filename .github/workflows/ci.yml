@@ -3,7 +3,8 @@ name: CI
 # Pushes and pull requests: format, lint and unit tests on Fedora 44, with
 # the Cargo build cached between runs (a few minutes, mostly dnf).
 # Version tags (v*): build the RPM once (its %check runs the Meson
-# validation tests), publish the GitHub release, refresh the dnf repository.
+# validation tests), publish the GitHub release, refresh the dnf repository,
+# and attach a Flatpak bundle.
 # Weekly: the same checks on Rawhide, to hear early about toolchain breakage.
 on:
   push:
@@ -119,6 +120,42 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "Clipperino $VERSION" \
             --notes-file notes.md
+
+  # Built beside the RPM, never in its way: the release and dnf repository
+  # do not wait for it; the bundle is attached to the release afterwards.
+  flatpak:
+    name: Build Flatpak bundle
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+        with:
+          bundle: clipperino.flatpak
+          manifest-path: build-aux/flatpak/io.github.djshiye.Clipperino.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+  flatpak-upload:
+    name: Attach Flatpak bundle
+    needs: [flatpak, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: clipperino-x86_64.flatpak
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mv clipperino.flatpak "clipperino-$VERSION.x86_64.flatpak"
+          gh release upload "$GITHUB_REF_NAME" "clipperino-$VERSION.x86_64.flatpak" \
+            --repo "$GITHUB_REPOSITORY"
 
   dnf-repo:
     name: Update dnf repository

@@ -11,3 +11,8 @@ releases/
 
 # Editors
 .vscode/
+
+# Flatpak
+.flatpak-builder/
+build-flatpak/
+*.flatpak

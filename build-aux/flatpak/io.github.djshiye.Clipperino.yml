@@ -1,0 +1,43 @@
+# Flatpak manifest. Builds the working tree:
+#   flatpak-builder --user --install --force-clean build-flatpak build-aux/flatpak/io.github.djshiye.Clipperino.yml
+# Flathub's copy is the same file with the `dir` source replaced by a git tag.
+# After a Cargo.lock change, regenerate the crate list:
+#   flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources.json
+id: io.github.djshiye.Clipperino
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: clipperino
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Status icon. Clipboard, shortcut, paste and autostart all go through
+  # portals and need no permission here.
+  - --talk-name=org.kde.StatusNotifierWatcher
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    # cargo-sources.json unpacks the crates and a registry config here.
+    CARGO_HOME: /run/build/clipperino/cargo
+    CARGO_NET_OFFLINE: 'true'
+modules:
+  - name: clipperino
+    buildsystem: meson
+    config-opts:
+      - -Doffline=true
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - builddir
+          - build-flatpak
+          - .flatpak-builder
+          - releases
+          - vendor
+          - spikes
+      - cargo-sources.json

@@ -186,7 +186,12 @@ pub async fn spawn(
     tx: async_channel::Sender<TrayEvent>,
     state: TrayState,
 ) -> Result<ksni::Handle<ClipperinoTray>, ksni::Error> {
-    ClipperinoTray { tx, state }.spawn().await
+    // Flatpak refuses the `StatusNotifierItem-PID-ID` name; hosts accept the
+    // connection's unique name instead.
+    ClipperinoTray { tx, state }
+        .disable_dbus_name(crate::platform::is_sandboxed())
+        .spawn()
+        .await
 }
 
 #[cfg(test)]

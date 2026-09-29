@@ -820,7 +820,9 @@ impl ClipperinoWindow {
     /// animated scroll action for frame-time measurements.
     #[cfg(debug_assertions)]
     fn setup_debug_actions(&self) {
-        if let Some(n) = std::env::var("CLIPPERINO_DEBUG_SEED")
+        if std::env::var("CLIPPERINO_DEBUG_SEED").as_deref() == Ok("demo") {
+            self.seed_demo();
+        } else if let Some(n) = std::env::var("CLIPPERINO_DEBUG_SEED")
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
         {
@@ -862,6 +864,59 @@ impl ClipperinoWindow {
             })
             .build();
         self.add_action_entries([scroll, snapshot]);
+    }
+
+    /// Debug builds only: realistic sample history for store screenshots
+    /// (CLIPPERINO_DEBUG_SEED=demo). `None` marks an image.
+    #[cfg(debug_assertions)]
+    fn seed_demo(&self) {
+        const CLIPS: &[(Option<&str>, bool)] = &[
+            (Some("Meeting moved to Thursday at 14:00, room 3B"), false),
+            (
+                Some("https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/8421"),
+                false,
+            ),
+            (None, false),
+            (Some("#3584e4"), false),
+            (Some("sudo dnf upgrade --refresh"), true),
+            (Some("hello@example.org"), false),
+            (
+                Some("let total: u32 = items.iter().map(|i| i.price).sum();"),
+                false,
+            ),
+            (None, false),
+            (Some("Groceries: oat milk, basil, lemons, sourdough"), false),
+            (Some("https://www.gnome.org/"), false),
+            (Some("#2ec27e"), false),
+            (Some("Tracking number: 1Z 999 AA1 01 2345 6784"), true),
+            (None, false),
+            (Some("The quick brown fox jumps over the lazy dog"), false),
+            (Some("git commit -m \"Fix the tray menu spacing\""), false),
+        ];
+        let now = glib::DateTime::now_local()
+            .map(|d| d.to_unix())
+            .unwrap_or_default();
+        let history = &self.imp().history;
+        for (i, (text, pinned)) in CLIPS.iter().enumerate() {
+            let i = i as u32;
+            let item = match text {
+                Some(t) => ClipItem::new_text((*t).to_owned()),
+                None => match debug_image(i) {
+                    Some(item) => item,
+                    None => continue,
+                },
+            };
+            // Minutes apart at first, then spilling into earlier days.
+            let age = if i < 8 {
+                i64::from(i) * 23 * 60
+            } else {
+                i64::from(i) * 9 * 3600
+            };
+            item.set_timestamp(now - age);
+            item.set_pinned(*pinned);
+            history.append_restored(item);
+        }
+        tracing::info!("seeded demo history (not persisted)");
     }
 
     /// Render the window at 2x into a PNG, for design reviews without the

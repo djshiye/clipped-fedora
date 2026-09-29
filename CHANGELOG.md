@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Flatpak**: a manifest in `build-aux/flatpak`, and tagged releases attach
+  a `.flatpak` bundle built on the GNOME 50 runtime. The status icon works
+  inside the sandbox.
+- Screenshots in the app metadata, for software centres and Flathub.
+
 ## 1.3.1 (2026-09-29)
 
 - The **status icon menu** is less crowded: it lists 8 clips instead of 10,
