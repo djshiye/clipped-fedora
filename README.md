@@ -126,10 +126,11 @@ rpmdev-setuptree && cp clipperino-1.3.0*.tar.* ~/rpmbuild/SOURCES/
 rpmbuild -ba build-aux/clipperino.spec
 ```
 
-CI (`.github/workflows/ci.yml`) runs formatting, clippy, unit tests, the Meson
-validation tests and an RPM build on Fedora 44 and Rawhide. Pushing a `v*` tag
-also publishes a GitHub release with the Fedora 44 RPM and the source and
-vendor tarballs the spec expects, and then refreshes the dnf repository on
+CI (`.github/workflows/ci.yml`) runs formatting, clippy and unit tests on
+Fedora 44 for every push, with the Cargo build cached, and on Rawhide weekly.
+Pushing a `v*` tag builds the RPM once (its `%check` runs the Meson
+validation tests), publishes a GitHub release with the RPM and the source
+and vendor tarballs the spec expects, and refreshes the dnf repository on
 GitHub Pages.
 
 ## Project layout
