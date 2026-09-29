@@ -10,7 +10,7 @@ mod imp {
     use super::*;
 
     #[derive(Default, CompositeTemplate)]
-    #[template(resource = "/io/github/djshiye/Clipped/ui/detail_dialog.ui")]
+    #[template(resource = "/io/github/djshiye/Clipperino/ui/detail_dialog.ui")]
     pub struct DetailDialog {
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
@@ -28,7 +28,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for DetailDialog {
-        const NAME: &'static str = "ClippedDetailDialog";
+        const NAME: &'static str = "ClipperinoDetailDialog";
         type Type = super::DetailDialog;
         type ParentType = adw::Dialog;
 

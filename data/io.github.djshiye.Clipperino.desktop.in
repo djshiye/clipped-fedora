@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=Clipped
+Name=Clipperino
 Comment=Clipboard history manager
-Exec=clipped
-Icon=io.github.djshiye.Clipped
+Exec=clipperino
+Icon=io.github.djshiye.Clipperino
 Terminal=false
 Type=Application
 Categories=Utility;GTK;GNOME;

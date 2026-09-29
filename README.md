@@ -1,10 +1,10 @@
-# Clipped
+# Clipperino
 
 **A clipboard history manager for Fedora and GNOME, rebuilt from the ground up.**
 
 Copy anything. Press **Super+Shift+V**. Pick it. It lands in the app you were using.
 
-Clipped keeps a history of the text and images you copy, lets you search and paste
+Clipperino keeps a history of the text and images you copy, lets you search and paste
 them back with the keyboard, and includes an emoji and symbol picker. It runs
 quietly in the background, starts with your session, and lives in the panel tray,
 where its menu gives one-click access to your recent clips.
@@ -13,7 +13,7 @@ where its menu gives one-click access to your recent clips.
 
 ## The rebuild
 
-Clipped 1.0 is a complete rewrite. The earlier app was written in C with GTK 3
+Clipperino (called Clipped until 1.1) is a complete rewrite. The earlier app was written in C with GTK 3
 and depended on X11: it grabbed the hotkey with `XGrabKey`, watched the
 clipboard through an XWayland bridge, faked keystrokes with `XTest`, and used the
 long-deprecated `GtkStatusIcon`. On a modern Fedora desktop (GNOME on Wayland)
@@ -48,7 +48,7 @@ shell extension, or on the app having focus.
 - **Symbol picker**: math, arrows, currency, punctuation, keyboard, geometric, Greek and more.
 - **Adaptive layout**: tabs at the bottom on a narrow window; list plus a live preview pane when the window is wider than 700 px.
 - **Runs in the background** and **starts at login** (Preferences › Run in Background).
-- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips, in a Pinned section and a Recent section, with thumbnails for images and a folder icon for files. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipped, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; the switch is greyed out where no tray exists.
+- **Quick access from the panel**: the status icon opens a compact menu of your ten most recent clips, in a Pinned section and a Recent section, with thumbnails for images and a folder icon for files. One click pastes into the app you're using, without opening the window. Below the clips: Open Clipperino, Clear History…, Preferences, Quit. Middle-click opens the full window. On GNOME this needs the AppIndicator extension; the switch is greyed out where no tray exists.
 - **Privacy**: entries flagged by password managers are skipped, clipboard content is never logged, and the history file is private to your user.
 - Follows the system light/dark style and accent colour.
 
@@ -68,23 +68,23 @@ the running service is about 53 MB. See `docs/PERF.md`.
 
 ## Install (Fedora)
 
-Download the RPM from the [releases](https://github.com/djshiye/clipped-fedora/releases)
+Download the RPM from the [releases](https://github.com/djshiye/Clipperino/releases)
 page (or from the `releases/` folder in this repository) and install it:
 
 ```bash
-sudo dnf install ./Clipped-v1.0.0.rpm
+sudo dnf install ./Clipperino-v1.1.0.rpm
 ```
 
 ### First run
 
-Launch **Clipped** from the app grid. GNOME asks two things, once:
+Launch **Clipperino** from the app grid. GNOME asks two things, once:
 
 1. **Remote desktop access.** This is how GNOME lets an app watch the clipboard
    in the background and paste for you. Click **Share**. Nothing leaves your
    computer; the permission is remembered.
 2. **Bind the shortcut** `Super+Shift+V`. Accept it.
 
-From then on Clipped runs in the background, starts at login, and shows its
+From then on Clipperino runs in the background, starts at login, and shows its
 icon in the panel tray.
 
 ### Requirements
@@ -104,16 +104,16 @@ sudo meson install -C builddir
 ```
 
 For development, `cargo run` works without installing, as long as a desktop file
-for `io.github.djshiye.Clipped` exists in `~/.local/share/applications`, because
+for `io.github.djshiye.Clipperino` exists in `~/.local/share/applications`, because
 the portals identify apps by their desktop entry.
 
 ### Build the RPM
 
 ```bash
-cargo vendor vendor && tar -cJf clipped-1.0.0-vendor.tar.xz vendor
-# source tarball named clipped-1.0.0.tar.gz with a clipped-1.0.0/ prefix
-rpmdev-setuptree && cp clipped-1.0.0*.tar.* ~/rpmbuild/SOURCES/
-rpmbuild -ba build-aux/clipped.spec
+cargo vendor vendor && tar -cJf clipperino-1.1.0-vendor.tar.xz vendor
+# source tarball named clipperino-1.1.0.tar.gz with a clipperino-1.1.0/ prefix
+rpmdev-setuptree && cp clipperino-1.1.0*.tar.* ~/rpmbuild/SOURCES/
+rpmbuild -ba build-aux/clipperino.spec
 ```
 
 CI (`.github/workflows/ci.yml`) runs formatting, clippy, unit tests, the Meson

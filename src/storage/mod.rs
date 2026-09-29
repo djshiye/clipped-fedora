@@ -83,7 +83,7 @@ impl Storage {
         let (tx, rx) = mpsc::channel::<Cmd>();
         let worker_images = images_dir.clone();
         thread::Builder::new()
-            .name("clipped-storage".into())
+            .name("clipperino-storage".into())
             .spawn(move || worker(conn, rx, &worker_images))
             .expect("spawn storage thread");
 
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn roundtrip_and_remove() {
-        let dir = std::env::temp_dir().join(format!("clipped-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("clipperino-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let (s, initial) = Storage::open(&dir).unwrap();
         assert!(initial.is_empty());

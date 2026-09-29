@@ -1,8 +1,8 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $ClippedWindow : Adw.ApplicationWindow {
-  title: _("Clipped");
+template $ClipperinoWindow : Adw.ApplicationWindow {
+  title: _("Clipperino");
   default-width: 380;
   default-height: 560;
   width-request: 320;
@@ -95,7 +95,7 @@ template $ClippedWindow : Adw.ApplicationWindow {
               child: Adw.StatusPage permission_page {
                 icon-name: "dialog-password-symbolic";
                 title: _("Clipboard Access Needed");
-                description: _("To record what you copy while it runs in the background, Clipped needs GNOME's remote desktop permission. GNOME will ask you to share; nothing leaves your computer and you only need to do this once.");
+                description: _("To record what you copy while it runs in the background, Clipperino needs GNOME's remote desktop permission. GNOME will ask you to share; nothing leaves your computer and you only need to do this once.");
 
                 child: Button grant_button {
                   label: _("Grant Access");
@@ -238,7 +238,7 @@ menu primary_menu {
     }
 
     item {
-      label: _("_About Clipped");
+      label: _("_About Clipperino");
       action: "app.about";
     }
   }

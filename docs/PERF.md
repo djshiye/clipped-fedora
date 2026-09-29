@@ -14,9 +14,9 @@ Measured 2026-09-28 on Fedora 44, GNOME 50.5, Wayland, 2 × 2048×1152 @ 120 Hz,
 How to reproduce (debug builds only):
 
 ```bash
-CLIPPED_DEBUG_SEED=1000 CLIPPED_DEBUG_SIZE=380x560 RUST_LOG=info cargo run
+CLIPPERINO_DEBUG_SEED=1000 CLIPPERINO_DEBUG_SIZE=380x560 RUST_LOG=info cargo run
 # then, from another terminal:
-busctl --user call io.github.djshiye.Clipped /io/github/djshiye/Clipped/window/1 \
+busctl --user call io.github.djshiye.Clipperino /io/github/djshiye/Clipperino/window/1 \
   org.gtk.Actions Activate "sava{sv}" debug-scroll 0 0
 ```
 

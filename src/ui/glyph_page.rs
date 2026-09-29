@@ -22,7 +22,7 @@ mod imp {
     use super::*;
 
     #[derive(Default, CompositeTemplate)]
-    #[template(resource = "/io/github/djshiye/Clipped/ui/glyph_page.ui")]
+    #[template(resource = "/io/github/djshiye/Clipperino/ui/glyph_page.ui")]
     pub struct GlyphPage {
         #[template_child]
         pub search_entry: TemplateChild<gtk::SearchEntry>,
@@ -40,7 +40,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for GlyphPage {
-        const NAME: &'static str = "ClippedGlyphPage";
+        const NAME: &'static str = "ClipperinoGlyphPage";
         type Type = super::GlyphPage;
         type ParentType = gtk::Box;
 

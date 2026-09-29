@@ -48,18 +48,18 @@ jobs:
           # directory that changes while it is read (its own output landing in it).
           DIST="$RUNNER_TEMP/dist"; mkdir -p "$DIST"
           cargo vendor --locked "$DIST/vendor" > /dev/null
-          tar -C "$DIST" -cJf "$DIST/clipped-${VERSION}-vendor.tar.xz" vendor
+          tar -C "$DIST" -cJf "$DIST/clipperino-${VERSION}-vendor.tar.xz" vendor
           tar --no-wildcards-match-slash \
               --exclude=./target --exclude=./builddir --exclude=./stage --exclude=./.git --exclude=./spikes \
-              --transform "s,^\./,clipped-${VERSION}/," -czf "$DIST/clipped-${VERSION}.tar.gz" .
+              --transform "s,^\./,clipperino-${VERSION}/," -czf "$DIST/clipperino-${VERSION}.tar.gz" .
           rpmdev-setuptree
-          cp "$DIST"/clipped-${VERSION}*.tar.* ~/rpmbuild/SOURCES/
-          rpmbuild -ba build-aux/clipped.spec
-          rpmlint build-aux/clipped.spec ~/rpmbuild/RPMS/x86_64/clipped-*.rpm
+          cp "$DIST"/clipperino-${VERSION}*.tar.* ~/rpmbuild/SOURCES/
+          rpmbuild -ba build-aux/clipperino.spec
+          rpmlint build-aux/clipperino.spec ~/rpmbuild/RPMS/x86_64/clipperino-*.rpm
 
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
-          name: clipped-rpm-fedora-${{ matrix.release }}
-          path: ~/rpmbuild/RPMS/x86_64/clipped-*.rpm
+          name: clipperino-rpm-fedora-${{ matrix.release }}
+          path: ~/rpmbuild/RPMS/x86_64/clipperino-*.rpm
           if-no-files-found: error

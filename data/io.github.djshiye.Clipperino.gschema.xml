@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="clipped">
-  <schema id="io.github.djshiye.Clipped" path="/io/github/djshiye/Clipped/">
+<schemalist gettext-domain="clipperino">
+  <schema id="io.github.djshiye.Clipperino" path="/io/github/djshiye/Clipperino/">
     <key name="max-history" type="u">
       <range min="10" max="1000"/>
       <default>100</default>

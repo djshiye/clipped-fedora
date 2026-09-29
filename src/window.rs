@@ -15,8 +15,8 @@ mod imp {
     use super::*;
 
     #[derive(Default, CompositeTemplate)]
-    #[template(resource = "/io/github/djshiye/Clipped/ui/window.ui")]
-    pub struct ClippedWindow {
+    #[template(resource = "/io/github/djshiye/Clipperino/ui/window.ui")]
+    pub struct ClipperinoWindow {
         #[template_child]
         pub stack: TemplateChild<adw::ViewStack>,
         #[template_child]
@@ -55,9 +55,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for ClippedWindow {
-        const NAME: &'static str = "ClippedWindow";
-        type Type = super::ClippedWindow;
+    impl ObjectSubclass for ClipperinoWindow {
+        const NAME: &'static str = "ClipperinoWindow";
+        type Type = super::ClipperinoWindow;
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
@@ -69,7 +69,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for ClippedWindow {
+    impl ObjectImpl for ClipperinoWindow {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
@@ -83,20 +83,20 @@ mod imp {
             obj.update_empty_state();
         }
     }
-    impl WidgetImpl for ClippedWindow {}
-    impl WindowImpl for ClippedWindow {}
-    impl ApplicationWindowImpl for ClippedWindow {}
-    impl AdwApplicationWindowImpl for ClippedWindow {}
+    impl WidgetImpl for ClipperinoWindow {}
+    impl WindowImpl for ClipperinoWindow {}
+    impl ApplicationWindowImpl for ClipperinoWindow {}
+    impl AdwApplicationWindowImpl for ClipperinoWindow {}
 }
 
 glib::wrapper! {
-    pub struct ClippedWindow(ObjectSubclass<imp::ClippedWindow>)
+    pub struct ClipperinoWindow(ObjectSubclass<imp::ClipperinoWindow>)
         @extends adw::ApplicationWindow, gtk::ApplicationWindow, gtk::Window, gtk::Widget,
         @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
                     gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
-impl ClippedWindow {
+impl ClipperinoWindow {
     pub fn new(app: &impl IsA<gtk::Application>) -> Self {
         glib::Object::builder().property("application", app).build()
     }
@@ -276,10 +276,10 @@ impl ClippedWindow {
             let win = win.clone();
             glib::timeout_add_local_once(std::time::Duration::from_millis(300), move || {
                 tracing::debug!(width = win.width(), height = win.height(), "window mapped");
-                // Debug builds: CLIPPED_DEBUG_SIZE=WxH forces a size after map, for
+                // Debug builds: CLIPPERINO_DEBUG_SIZE=WxH forces a size after map, for
                 // layout checks on desktops whose extensions restore geometry.
                 #[cfg(debug_assertions)]
-                if let Some((w, h)) = std::env::var("CLIPPED_DEBUG_SIZE").ok().and_then(|v| {
+                if let Some((w, h)) = std::env::var("CLIPPERINO_DEBUG_SIZE").ok().and_then(|v| {
                     let (a, b) = v.split_once('x')?;
                     Some((a.parse().ok()?, b.parse().ok()?))
                 }) {
@@ -302,11 +302,11 @@ impl ClippedWindow {
         // Seeded debug runs stay in memory: a seed must never be able to trim
         // or clear the user's real history.
         #[cfg(debug_assertions)]
-        if std::env::var_os("CLIPPED_DEBUG_SEED").is_some() {
-            tracing::warn!("CLIPPED_DEBUG_SEED set: storage disabled for this run");
+        if std::env::var_os("CLIPPERINO_DEBUG_SEED").is_some() {
+            tracing::warn!("CLIPPERINO_DEBUG_SEED set: storage disabled for this run");
             return;
         }
-        let dir = glib::user_data_dir().join("clipped");
+        let dir = glib::user_data_dir().join("clipperino");
         match crate::storage::Storage::open(&dir) {
             Ok((storage, records)) => {
                 let history = &self.imp().history;
@@ -483,11 +483,11 @@ impl ClippedWindow {
         self.setup_debug_actions();
     }
 
-    /// Debug builds only: seed synthetic history (CLIPPED_DEBUG_SEED=N) and an
+    /// Debug builds only: seed synthetic history (CLIPPERINO_DEBUG_SEED=N) and an
     /// animated scroll action for frame-time measurements.
     #[cfg(debug_assertions)]
     fn setup_debug_actions(&self) {
-        if let Some(n) = std::env::var("CLIPPED_DEBUG_SEED")
+        if let Some(n) = std::env::var("CLIPPERINO_DEBUG_SEED")
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
         {

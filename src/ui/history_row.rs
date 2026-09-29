@@ -12,7 +12,7 @@ mod imp {
     use super::*;
 
     #[derive(Default, CompositeTemplate)]
-    #[template(resource = "/io/github/djshiye/Clipped/ui/history_row.ui")]
+    #[template(resource = "/io/github/djshiye/Clipperino/ui/history_row.ui")]
     pub struct HistoryRow {
         #[template_child]
         pub icon: TemplateChild<gtk::Image>,
@@ -33,7 +33,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for HistoryRow {
-        const NAME: &'static str = "ClippedHistoryRow";
+        const NAME: &'static str = "ClipperinoHistoryRow";
         type Type = super::HistoryRow;
         type ParentType = gtk::Box;
 

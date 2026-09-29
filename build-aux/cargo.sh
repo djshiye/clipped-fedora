@@ -8,7 +8,7 @@ BUILDTYPE="$4"
 APP_BIN="$5"
 OFFLINE="$6"
 LOCALEDIR="${7:-}"
-if [ -n "$LOCALEDIR" ]; then export CLIPPED_LOCALEDIR="$LOCALEDIR"; fi
+if [ -n "$LOCALEDIR" ]; then export CLIPPERINO_LOCALEDIR="$LOCALEDIR"; fi
 
 # Meson hands us @OUTPUT@ relative to the build root; make it absolute before we cd.
 case "$OUTPUT" in

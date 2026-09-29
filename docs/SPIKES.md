@@ -61,12 +61,12 @@ Deferred to the first Phase 4 build (needs the real window).
 
 ## Window size on this machine: the Déjà Window extension wins
 
-The app restores its last window size from GSettings and Blueprint sets a default of 380×560, but on this machine the window always maps at the size the **Déjà Window** GNOME extension has stored for `io.github.djshiye.Clipped`. A plain probe window under a different app ID honours its default size. This is the extension doing its job, not an app bug; debug builds accept `CLIPPED_DEBUG_SIZE=WxH` to force a size after mapping for layout checks.
+The app restores its last window size from GSettings and Blueprint sets a default of 380×560, but on this machine the window always maps at the size the **Déjà Window** GNOME extension has stored for `io.github.djshiye.Clipperino`. A plain probe window under a different app ID honours its default size. This is the extension doing its job, not an app bug; debug builds accept `CLIPPERINO_DEBUG_SIZE=WxH` to force a size after mapping for layout checks.
 
 ## GtkImage baseline warnings from the Preferences dialog
 
-Opening Preferences logs "GtkImage … reported baselines of minimum -2147483648 …" for four images (the spin row's +/− buttons and switch rows). It does not reproduce for the About, Details or Shortcuts dialogs. Cosmetic, comes from libadwaita/GTK internals (possibly interacting with the user's Orchis stylesheet); not from Clipped's own widgets.
+Opening Preferences logs "GtkImage … reported baselines of minimum -2147483648 …" for four images (the spin row's +/− buttons and switch rows). It does not reproduce for the About, Details or Shortcuts dialogs. Cosmetic, comes from libadwaita/GTK internals (possibly interacting with the user's Orchis stylesheet); not from Clipperino's own widgets.
 
 ## User GTK themes override app CSS at APPLICATION priority
 
-`~/.config/gtk-4.0/gtk.css` loads at `GTK_STYLE_PROVIDER_PRIORITY_USER` (800), above `APPLICATION` (600). The Orchis theme's generic `listview > row` rules therefore erased Clipped's card design. Clipped loads its stylesheet at `USER + 1`; the rules are scoped to Clipped's own widgets and classes, so the theme still styles standard controls.
+`~/.config/gtk-4.0/gtk.css` loads at `GTK_STYLE_PROVIDER_PRIORITY_USER` (800), above `APPLICATION` (600). The Orchis theme's generic `listview > row` rules therefore erased Clipperino's card design. Clipperino loads its stylesheet at `USER + 1`; the rules are scoped to Clipperino's own widgets and classes, so the theme still styles standard controls.

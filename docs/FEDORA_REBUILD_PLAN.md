@@ -1,4 +1,4 @@
-# Clipped 1.0: Rust rebuild for Fedora
+# Clipperino (formerly Clipped) 1.0: Rust rebuild for Fedora
 
 Plan written 2026-09-28 against commit e7f1ddf. Target: Fedora 44 Workstation, GNOME 50, Wayland. Delivery: RPM.
 
@@ -52,7 +52,7 @@ Nothing from `src/` is reused except the curated symbol list, which moves to a d
 | Logging | `tracing` + `tracing-subscriber` (journald-friendly) | |
 | i18n | `gettext-rs` | |
 | Build | Meson wrapping Cargo (GNOME Builder's Rust template layout) | Meson installs desktop/metainfo/schema/icons; Cargo builds the binary. |
-| Packaging | RPM via `cargo-rpm-macros`, published on COPR | `dnf copr enable` + `dnf install clipped`. |
+| Packaging | RPM via `cargo-rpm-macros`, published on COPR | `dnf copr enable` + `dnf install clipperino`. |
 
 ### 2.2 Platform integration (all Wayland-correct, all through portals)
 
@@ -60,9 +60,9 @@ Nothing from `src/` is reused except the curated symbol list, which moves to a d
 |---|---|---|
 | Clipboard monitoring | `ashpd::desktop::remote_desktop::RemoteDesktop` session with `ashpd::desktop::clipboard::Clipboard::request` → `select_devices(DeviceType::Keyboard, persist_mode = ExplicitlyRevoked, restore_token)` → `start` → stream `selection_owner_changed`, read via `selection_read` fd. Token stored in GSettings. | If permission denied: `AdwStatusPage` explaining why, with "Grant Access" button. No X11 fallback in 2.0. |
 | Paste into previous app | Same session: `notify_keyboard_keycode(KEY_LEFTCTRL, Pressed)`, `KEY_V`, releases. | Setting `paste-on-select` (default decided by spike 4). Off = copy and close with toast. |
-| Global shortcut | `ashpd::desktop::global_shortcuts::GlobalShortcuts`: `create_session` → `bind_shortcuts([NewShortcut::new("toggle", "Show clipboard history").preferred_trigger("<Super><Shift>v")])` → stream `receive_activated`. GNOME lists it under Settings › Keyboard. | Document `clipped --toggle` for a manual custom shortcut. |
+| Global shortcut | `ashpd::desktop::global_shortcuts::GlobalShortcuts`: `create_session` → `bind_shortcuts([NewShortcut::new("toggle", "Show clipboard history").preferred_trigger("<Super><Shift>v")])` → stream `receive_activated`. GNOME lists it under Settings › Keyboard. | Document `clipperino --toggle` for a manual custom shortcut. |
 | Autostart | `ashpd::desktop::background::Background::request().auto_start(true).reason(...)`; app appears in Settings › Apps › Background. | RPM installs nothing in `/etc/xdg/autostart`; the app asks once on first run. |
-| Single instance, CLI | `adw::Application` with D-Bus activation (`io.github.<owner>.Clipped.service`), actions `--toggle`, `--quit`. | – |
+| Single instance, CLI | `adw::Application` with D-Bus activation (`io.github.<owner>.Clipperino.service`), actions `--toggle`, `--quit`. | – |
 | Tray | Optional `ksni` StatusNotifierItem, registered only when `org.kde.StatusNotifierWatcher` is on the bus. Off by default. | – |
 | Window | `adw::ApplicationWindow`, 380×560 default, resizable, size remembered, placed by Mutter. | – |
 | Emoji data | GTK's own emoji database (`/org/gtk/libgtk/emoji/en.data` GVariant, localized) | Curated symbols in `data/symbols.json`. |
@@ -81,7 +81,7 @@ Principles were taken from developer.apple.com (Designing for macOS, Layout, Typ
 
 ### 3.1 Rules
 
-| Apple HIG principle | Rule for Clipped |
+| Apple HIG principle | Rule for Clipperino |
 |---|---|
 | Respect systemwide appearance; never add an app-specific light/dark switch | `adw::StyleManager` defaults. No custom palette. Semantic CSS only (`@window_bg_color`, `@card_bg_color`, `@accent_bg_color`, `.dim-label`). |
 | Contrast ≥ 4.5:1, 7:1 for small text | Adwaita label colours only. Verified in high-contrast mode. |
@@ -94,7 +94,7 @@ Principles were taken from developer.apple.com (Designing for macOS, Layout, Typ
 | Settings: good defaults, few of them, apply immediately, `Ctrl+,`, no Save button | `AdwPreferencesDialog`, every control bound with `settings.bind()`. Groups: Shortcut, History, Startup, Appearance. |
 | Feedback: confirm significant actions, warn on unexpected irreversible loss, prefer undo | "Copied" toast. Clear history → `AdwAlertDialog` with destructive "Clear". Delete one item → toast with Undo. Permission denied → status page with action. |
 | Motion: brief, purposeful, cancellable; respect reduce-motion | See 3.2. |
-| Menus: verb labels, title case, grouped, icons only with purpose | Row menu: Copy, Pin/Unpin, separator, Delete. App menu: Preferences, Keyboard Shortcuts, About Clipped, Quit. |
+| Menus: verb labels, title case, grouped, icons only with purpose | Row menu: Copy, Pin/Unpin, separator, Delete. App menu: Preferences, Keyboard Shortcuts, About Clipperino, Quit. |
 | Icons: simple, consistent weight, vector, system symbols | Adwaita symbolic icons: `edit-paste-symbolic`, `face-smile-symbolic`, `font-x-generic-symbolic`, `emblem-system-symbolic`. Accessible labels on all. |
 | App icon: simple, centred, recognisable, dark variant | Cat redrawn as SVG on the GNOME 128 px grid plus `-symbolic`. |
 | Accessibility: keyboard-only use, target sizes, labels | Full keyboard model (3.4). Minimum 32 px targets. `gtk::Accessible` names on every icon button. Tested with Orca. |
@@ -120,7 +120,7 @@ Rule: no custom `adw::SpringAnimation` or `adw::TimedAnimation` may run on a wid
 
 ### 3.2b Visual language (implemented)
 
-The Apple feel comes from surfaces, not from imitating macOS chrome: history rows are cards (14 px radius, 1 px hairline ring, soft shadow, hover lift), the selected card is tinted with the accent colour and ringed rather than filled, the kind icon sits in a tinted rounded square, the search field is a pill with a soft focus ring, emoji and symbol cells are 44 px with rounded hover states, category chips sit in a pill group, secondary controls (⋮) appear only on hover, focus or selection, and every state change transitions in 120–150 ms ease-out. All colours are Adwaita tokens through `var(--…)` and `color-mix()`, so light, dark and accent follow the system. The stylesheet loads one notch above the user stylesheet priority because third-party GTK themes (e.g. Orchis) otherwise erase the card rules; it only targets Clipped's own widgets.
+The Apple feel comes from surfaces, not from imitating macOS chrome: history rows are cards (14 px radius, 1 px hairline ring, soft shadow, hover lift), the selected card is tinted with the accent colour and ringed rather than filled, the kind icon sits in a tinted rounded square, the search field is a pill with a soft focus ring, emoji and symbol cells are 44 px with rounded hover states, category chips sit in a pill group, secondary controls (⋮) appear only on hover, focus or selection, and every state change transitions in 120–150 ms ease-out. All colours are Adwaita tokens through `var(--…)` and `color-mix()`, so light, dark and accent follow the system. The stylesheet loads one notch above the user stylesheet priority because third-party GTK themes (e.g. Orchis) otherwise erase the card rules; it only targets Clipperino's own widgets.
 
 ### 3.3 Typography, colour, layout
 
@@ -133,7 +133,7 @@ The Apple feel comes from surfaces, not from imitating macOS chrome: history row
 
 | Key | Action |
 |---|---|
-| `Super+Shift+V` (portal; user can change) | Toggle Clipped |
+| `Super+Shift+V` (portal; user can change) | Toggle Clipperino |
 | `Escape` | Clear search if non-empty, else close |
 | `↑ ↓`, `Enter` | Move selection, paste (or copy and close) |
 | `Ctrl+1` … `Ctrl+9` | Paste the nth visible item |
@@ -176,12 +176,12 @@ Engineering rules:
 
 ### Phase 1: Scaffolding
 
-3. App ID `io.github.<owner>.Clipped`; binary `clipped`. Tag the old tree `v1.0.0-legacy` and delete `src/`, `Makefile*`, `debian/`, `build-deb.sh`, `install.sh`, `uninstall.sh`, `run.sh`, `clipped.exe`, `releases/`.
+3. App ID `io.github.<owner>.Clipperino`; binary `clipperino`. Tag the old tree `v1.0.0-legacy` and delete `src/`, `Makefile*`, `debian/`, `build-deb.sh`, `install.sh`, `uninstall.sh`, `run.sh`, `clipped.exe`, `releases/`.
 4. Tree:
    ```
    Cargo.toml  Cargo.lock  meson.build  meson_options.txt  build-aux/
    data/        <id>.desktop.in  <id>.metainfo.xml.in  <id>.gschema.xml  <id>.service.in
-                icons/hicolor/{scalable,symbolic}/apps/  symbols.json  style.css  clipped.gresource.xml
+                icons/hicolor/{scalable,symbolic}/apps/  symbols.json  style.css  clipperino.gresource.xml
    data/ui/     window.blp  history-page.blp  history-row.blp  glyph-page.blp  glyph-cell.blp
                 preferences.blp  shortcuts.blp  detail-dialog.blp
    src/         main.rs  application.rs  config.rs  window.rs
@@ -192,7 +192,7 @@ Engineering rules:
    po/          tests/   docs/
    ```
 5. `Cargo.toml` dependencies pinned to Fedora-packaged versions: `gtk4 = { version = "0.11", features = ["v4_22"] }`, `libadwaita = { version = "0.9", features = ["v1_9"] }`, `ashpd = "0.13"`, `rusqlite = "0.38"`, `blake3 = "1"`, `serde`/`serde_json = "1"`, `tracing = "0.1"`, `gettext-rs = "0.7"`, `unicode-segmentation = "1"`. Optional feature `tray = ["ksni"]`.
-6. `meson.build`: `project('clipped', 'rust', version: '2.0.0')`, `gnome.compile_resources`, `gnome.compile_schemas`, a `custom_target` running `cargo build --release --offline` with `CARGO_HOME` pointed at the build dir, `gnome.post_install(glib_compile_schemas: true, gtk_update_icon_cache: true, update_desktop_database: true)`. Blueprint compiled via `blueprint-compiler batch-compile`.
+6. `meson.build`: `project('clipperino', 'rust', version: '2.0.0')`, `gnome.compile_resources`, `gnome.compile_schemas`, a `custom_target` running `cargo build --release --offline` with `CARGO_HOME` pointed at the build dir, `gnome.post_install(glib_compile_schemas: true, gtk_update_icon_cache: true, update_desktop_database: true)`. Blueprint compiled via `blueprint-compiler batch-compile`.
 7. `config.rs.in` generated by Meson with `APP_ID`, `VERSION`, `LOCALEDIR`, `PKGDATADIR`.
 8. Icons: full-colour SVG on the 128 px grid, symbolic SVG, both in `hicolor`. GResource embeds UI, CSS, `symbols.json`.
 9. Tooling: `.editorconfig`, `rustfmt.toml`, `clippy` in CI with `-D warnings`, `cargo deny` for licences, `.gitignore` with `target/` and `builddir/`.
@@ -211,7 +211,7 @@ Engineering rules:
 
 17. `ClipItem` GObject (`glib::Properties` derive): `id: u64`, `kind: Kind {Text, Image, Files}`, `text: Option<String>`, `preview: String`, `thumbnail: Option<gdk::Texture>`, `image_path: Option<PathBuf>`, `timestamp: i64`, `pinned: bool`, `hash: [u8; 32]`.
 18. `HistoryStore`: `gio::ListStore<ClipItem>` + `HashMap<hash, ClipItem>`; `add` moves an existing hash to index 0; `trim` respects `max-history` and never drops pinned items; `remove` returns the item for Undo.
-19. `storage/db.rs`: `$XDG_DATA_HOME/clipped/history.db`, table `items(id, kind, hash UNIQUE, text, preview, image_path, created, pinned)`, `PRAGMA journal_mode=WAL; synchronous=NORMAL`. Writer thread + `std::sync::mpsc`. Images under `images/<hash>.png`, thumbnails under `thumbs/<hash>.png`.
+19. `storage/db.rs`: `$XDG_DATA_HOME/clipperino/history.db`, table `items(id, kind, hash UNIQUE, text, preview, image_path, created, pinned)`, `PRAGMA journal_mode=WAL; synchronous=NORMAL`. Writer thread + `std::sync::mpsc`. Images under `images/<hash>.png`, thumbnails under `thumbs/<hash>.png`.
 20. `storage/migrate.rs`: import `~/.local/share/clipman/history.txt` once, then rename it `.imported`.
 21. Limits: `max-history` 10–1000 (default 100), skip text > 1 MiB, images > 20 MiB.
 22. Glyph models: `Glyph { glyph, name, keywords, group }`; emoji from GTK's GVariant with the current locale, symbols from `symbols.json`; `recent-emoji` GSettings list capped at 24.
@@ -238,10 +238,10 @@ Engineering rules:
 
 ### Phase 6: RPM packaging and distribution
 
-37. `build-aux/clipped.spec`: `BuildRequires: cargo-rpm-macros >= 24, meson, rust-packaging, pkgconfig(gtk4) >= 4.22, pkgconfig(libadwaita-1) >= 1.9, pkgconfig(sqlite3), desktop-file-utils, libappstream-glib, blueprint-compiler, gettext`; `%generate_buildrequires` with `%cargo_generate_buildrequires`; `%prep` → `%cargo_prep`; `%build` → `%meson` + `%meson_build`; `%install` → `%meson_install`; `%check` → `%cargo_test`, `desktop-file-validate`, `appstream-util validate-relax`. Files: `%{_bindir}/clipped`, desktop, metainfo, schema, icons, D-Bus service, locale.
+37. `build-aux/clipperino.spec`: `BuildRequires: cargo-rpm-macros >= 24, meson, rust-packaging, pkgconfig(gtk4) >= 4.22, pkgconfig(libadwaita-1) >= 1.9, pkgconfig(sqlite3), desktop-file-utils, libappstream-glib, blueprint-compiler, gettext`; `%generate_buildrequires` with `%cargo_generate_buildrequires`; `%prep` → `%cargo_prep`; `%build` → `%meson` + `%meson_build`; `%install` → `%meson_install`; `%check` → `%cargo_test`, `desktop-file-validate`, `appstream-util validate-relax`. Files: `%{_bindir}/clipperino`, desktop, metainfo, schema, icons, D-Bus service, locale.
 38. Crates not in Fedora (only `ksni` if the tray feature is on, `unicode-segmentation` is packaged): build the RPM with the tray feature off, or ship a vendored tarball and `%cargo_prep -v vendor`. Default: tray off in the RPM.
-39. Local build: `rpmdev-setuptree`, `meson dist`, `rpmbuild -ba`, `rpmlint`. Install: `sudo dnf install ~/rpmbuild/RPMS/x86_64/clipped-2.0.0-1.fc44.x86_64.rpm`.
-40. COPR: `copr-cli create clipped --chroot fedora-44-x86_64 --chroot fedora-45-x86_64 --chroot fedora-rawhide-x86_64`, `copr-cli build clipped clipped-2.0.0-1.fc44.src.rpm`. Users: `sudo dnf copr enable <user>/clipped && sudo dnf install clipped`. Also attach the RPM to each GitHub Release for one-file installs.
+39. Local build: `rpmdev-setuptree`, `meson dist`, `rpmbuild -ba`, `rpmlint`. Install: `sudo dnf install ~/rpmbuild/RPMS/x86_64/clipperino-2.0.0-1.fc44.x86_64.rpm`.
+40. COPR: `copr-cli create clipperino --chroot fedora-44-x86_64 --chroot fedora-45-x86_64 --chroot fedora-rawhide-x86_64`, `copr-cli build clipperino clipperino-2.0.0-1.fc44.src.rpm`. Users: `sudo dnf copr enable <user>/clipperino && sudo dnf install clipperino`. Also attach the RPM to each GitHub Release for one-file installs.
 41. AppImage is intentionally not provided: GTK4 and libadwaita would have to be bundled wholesale with no maintained tooling, D-Bus activation and GSettings schemas do not register from a loose file, and a background service should not live in a movable file. If a distro-independent single file is wanted later, a `.flatpak` bundle needs no extra code.
 
 ### Phase 7: Testing and CI
@@ -263,7 +263,7 @@ Engineering rules:
 
 ```toml
 [package]
-name = "clipped"
+name = "clipperino"
 version = "2.0.0"
 edition = "2024"
 rust-version = "1.92"

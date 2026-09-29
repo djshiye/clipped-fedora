@@ -1,6 +1,6 @@
-data/io.github.djshiye.Clipped.desktop.in
-data/io.github.djshiye.Clipped.metainfo.xml.in
-data/io.github.djshiye.Clipped.gschema.xml
+data/io.github.djshiye.Clipperino.desktop.in
+data/io.github.djshiye.Clipperino.metainfo.xml.in
+data/io.github.djshiye.Clipperino.gschema.xml
 data/ui/window.blp
 data/ui/history_row.blp
 data/ui/glyph_page.blp

@@ -38,12 +38,12 @@ pub struct TrayItem {
     pub icon_png: Option<Vec<u8>>,
 }
 
-pub struct ClippedTray {
+pub struct ClipperinoTray {
     tx: async_channel::Sender<TrayEvent>,
     pub items: Vec<TrayItem>,
 }
 
-impl ClippedTray {
+impl ClipperinoTray {
     fn send(&self, ev: TrayEvent) {
         self.tx.try_send(ev).ok();
     }
@@ -59,7 +59,7 @@ pub fn menu_label(preview: &str) -> String {
     out.replace('_', "__")
 }
 
-impl Tray for ClippedTray {
+impl Tray for ClipperinoTray {
     // Left click opens the menu (the quick-access panel); middle click opens the window.
     const MENU_ON_ACTIVATE: bool = true;
 
@@ -135,7 +135,7 @@ impl Tray for ClippedTray {
         menu.push(MenuItem::Separator);
         menu.push(
             StandardItem {
-                label: gettext("Open Clipped"),
+                label: gettext("Open Clipperino"),
                 icon_name: "edit-paste-symbolic".into(),
                 shortcut: vec![vec!["Super".into(), "Shift".into(), "v".into()]],
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::Toggle)),
@@ -181,8 +181,8 @@ impl Tray for ClippedTray {
 pub async fn spawn(
     tx: async_channel::Sender<TrayEvent>,
     items: Vec<TrayItem>,
-) -> Result<ksni::Handle<ClippedTray>, ksni::Error> {
-    ClippedTray { tx, items }.spawn().await
+) -> Result<ksni::Handle<ClipperinoTray>, ksni::Error> {
+    ClipperinoTray { tx, items }.spawn().await
 }
 
 #[cfg(test)]

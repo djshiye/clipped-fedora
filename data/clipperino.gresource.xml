@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/io/github/djshiye/Clipped">
+  <gresource prefix="/io/github/djshiye/Clipperino">
     <file preprocess="xml-stripblanks">ui/window.ui</file>
     <file preprocess="xml-stripblanks">ui/history_row.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>

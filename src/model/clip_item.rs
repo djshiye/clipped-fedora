@@ -6,7 +6,7 @@ use unicode_segmentation::UnicodeSegmentation;
 pub const PREVIEW_MAX_GRAPHEMES: usize = 120;
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
-#[enum_type(name = "ClippedClipKind")]
+#[enum_type(name = "ClipperinoClipKind")]
 pub enum ClipKind {
     #[default]
     Text,
@@ -46,7 +46,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for ClipItem {
-        const NAME: &'static str = "ClippedClipItem";
+        const NAME: &'static str = "ClipperinoClipItem";
         type Type = super::ClipItem;
     }
 

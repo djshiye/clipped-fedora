@@ -27,22 +27,22 @@ fn main() {
     let schema_dir = out.join("schemas");
     fs::create_dir_all(&schema_dir).unwrap();
     fs::copy(
-        "data/io.github.djshiye.Clipped.gschema.xml",
-        schema_dir.join("io.github.djshiye.Clipped.gschema.xml"),
+        "data/io.github.djshiye.Clipperino.gschema.xml",
+        schema_dir.join("io.github.djshiye.Clipperino.gschema.xml"),
     )
     .unwrap();
-    println!("cargo:rerun-if-changed=data/io.github.djshiye.Clipped.gschema.xml");
+    println!("cargo:rerun-if-changed=data/io.github.djshiye.Clipperino.gschema.xml");
     let status = Command::new("glib-compile-schemas")
         .arg(&schema_dir)
         .status()
         .expect("glib-compile-schemas not found");
     assert!(status.success(), "glib-compile-schemas failed");
 
-    println!("cargo:rerun-if-changed=data/clipped.gresource.xml");
+    println!("cargo:rerun-if-changed=data/clipperino.gresource.xml");
     println!("cargo:rerun-if-changed=data/style.css");
     glib_build_tools::compile_resources(
         &["data", out.to_str().unwrap()],
-        "data/clipped.gresource.xml",
-        "clipped.gresource",
+        "data/clipperino.gresource.xml",
+        "clipperino.gresource",
     );
 }

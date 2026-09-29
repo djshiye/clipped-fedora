@@ -1,11 +1,11 @@
-.TH CLIPPED 1 "September 2026" "clipped 1.0.0" "User Commands"
+.TH CLIPPERINO 1 "September 2026" "clipperino 1.1.0" "User Commands"
 .SH NAME
-clipped \- clipboard history manager for GNOME
+clipperino \- clipboard history manager for GNOME
 .SH SYNOPSIS
-.B clipped
+.B clipperino
 .RI [ OPTION ]
 .SH DESCRIPTION
-.B Clipped
+.B Clipperino
 records the text and images you copy and lets you paste any of them back into
 the application you were using. It runs in the background on GNOME (Wayland)
 using desktop portals for clipboard access, the global shortcut and autostart,
@@ -27,16 +27,16 @@ autostart entry and D-Bus activation launch it.
 Show the standard GApplication options.
 .SH FILES
 .TP
-.I ~/.local/share/clipped/history.db
+.I ~/.local/share/clipperino/history.db
 Clipboard history (SQLite). Images are stored as PNG files in
-.IR ~/.local/share/clipped/images/ .
+.IR ~/.local/share/clipperino/images/ .
 .TP
-.I ~/.config/autostart/io.github.djshiye.Clipped.desktop
+.I ~/.config/autostart/io.github.djshiye.Clipperino.desktop
 Autostart entry managed through the Background portal.
 .SH SETTINGS
 Preferences are stored in GSettings under
-.BR io.github.djshiye.Clipped .
+.BR io.github.djshiye.Clipperino .
 .SH BUGS
-Report at https://github.com/djshiye/clipped-fedora/issues
+Report at https://github.com/djshiye/Clipperino/issues
 .SH AUTHOR
 djshiye

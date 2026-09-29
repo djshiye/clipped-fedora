@@ -1,12 +1,12 @@
-%global app_id io.github.djshiye.Clipped
+%global app_id io.github.djshiye.Clipperino
 
-Name:           clipped
-Version:        1.0.0
+Name:           clipperino
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Clipboard history manager for GNOME
 
 License:        MIT
-URL:            https://github.com/djshiye/clipped-fedora
+URL:            https://github.com/djshiye/Clipperino
 Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 # cargo vendor --locked, from the same tag
 Source1:        %{url}/releases/download/v%{version}/%{name}-%{version}-vendor.tar.xz
@@ -28,9 +28,12 @@ Requires:       libadwaita%{?_isa} >= 1.9
 Requires:       hicolor-icon-theme
 # Clipboard monitoring, the global shortcut and autostart all go through portals.
 Recommends:     xdg-desktop-portal-gnome
+# Renamed from Clipped in 1.1.0.
+Obsoletes:      clipped < 1.1.0
+Provides:       clipped = %{version}-%{release}
 
 %description
-Clipped keeps a history of the text and images you copy and lets you paste
+Clipperino keeps a history of the text and images you copy and lets you paste
 any of them back into the app you were using. It runs in the background on
 GNOME (Wayland) using desktop portals, opens with Super+Shift+V, and includes
 a searchable emoji and symbol picker.
@@ -64,5 +67,9 @@ export RUSTFLAGS="%{build_rustflags}"
 %{_datadir}/metainfo/%{app_id}.metainfo.xml
 
 %changelog
+* Tue Sep 29 2026 djshiye <dreamfantom16@gmail.com> - 1.1.0-1
+- Rename from Clipped to Clipperino
+- Open the tray menu immediately on click
+
 * Mon Sep 28 2026 djshiye <dreamfantom16@gmail.com> - 1.0.0-1
 - Rewrite in Rust with GTK 4 and libadwaita for GNOME on Wayland

@@ -1,5 +1,5 @@
-project('clipped', 'rust',
-  version: '1.0.0',
+project('clipperino', 'rust',
+  version: '1.1.0',
   meson_version: '>= 1.0.0',
   license: 'MIT',
   default_options: ['buildtype=release'],
@@ -8,7 +8,7 @@ project('clipped', 'rust',
 gnome = import('gnome')
 i18n = import('i18n')
 
-app_id = 'io.github.djshiye.Clipped'
+app_id = 'io.github.djshiye.Clipperino'
 prefix = get_option('prefix')
 bindir = prefix / get_option('bindir')
 datadir = prefix / get_option('datadir')

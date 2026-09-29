@@ -44,4 +44,4 @@ install_data('icons/hicolor/scalable/apps' / app_id + '.svg',
 install_data('icons/hicolor/symbolic/apps' / app_id + '-symbolic.svg',
   install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps')
 
-install_man('clipped.1')
+install_man('clipperino.1')

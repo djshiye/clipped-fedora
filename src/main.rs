@@ -30,8 +30,8 @@ fn main() -> gtk::glib::ExitCode {
         .init();
 
     i18n::init();
-    gio::resources_register_include!("clipped.gresource").expect("failed to register resources");
+    gio::resources_register_include!("clipperino.gresource").expect("failed to register resources");
 
-    let app = application::ClippedApplication::new();
+    let app = application::ClipperinoApplication::new();
     app.run()
 }

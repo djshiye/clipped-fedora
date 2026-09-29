@@ -1,1 +1,1 @@
-i18n.gettext('clipped', preset: 'glib')
+i18n.gettext('clipperino', preset: 'glib')

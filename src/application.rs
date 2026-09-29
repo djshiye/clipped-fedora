@@ -6,21 +6,21 @@ use gtk::{gio, glib};
 use crate::{
     config,
     platform::portal::PortalSession,
-    preferences::ClippedPreferences,
+    preferences::ClipperinoPreferences,
     settings::{self, settings},
-    window::ClippedWindow,
+    window::ClipperinoWindow,
 };
 
 mod imp {
     use super::*;
 
     #[derive(Default)]
-    pub struct ClippedApplication {
-        pub window: OnceCell<ClippedWindow>,
+    pub struct ClipperinoApplication {
+        pub window: OnceCell<ClipperinoWindow>,
         pub hold_guard: OnceCell<gio::ApplicationHoldGuard>,
         pub shortcut_bound: std::cell::Cell<bool>,
         pub background_setup: std::cell::Cell<bool>,
-        pub tray: std::cell::RefCell<Option<ksni::Handle<crate::platform::tray::ClippedTray>>>,
+        pub tray: std::cell::RefCell<Option<ksni::Handle<crate::platform::tray::ClipperinoTray>>>,
         pub tray_refresh_pending: std::cell::Cell<bool>,
         /// PNG menu icons by content hash, so images are encoded once.
         pub tray_icon_cache: std::cell::RefCell<std::collections::HashMap<[u8; 32], Vec<u8>>>,
@@ -29,15 +29,15 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for ClippedApplication {
-        const NAME: &'static str = "ClippedApplication";
-        type Type = super::ClippedApplication;
+    impl ObjectSubclass for ClipperinoApplication {
+        const NAME: &'static str = "ClipperinoApplication";
+        type Type = super::ClipperinoApplication;
         type ParentType = adw::Application;
     }
 
-    impl ObjectImpl for ClippedApplication {}
+    impl ObjectImpl for ClipperinoApplication {}
 
-    impl ApplicationImpl for ClippedApplication {
+    impl ApplicationImpl for ClipperinoApplication {
         fn startup(&self) {
             self.parent_startup();
             let app = self.obj();
@@ -45,7 +45,8 @@ mod imp {
             app.setup_actions();
             // Keep running without a visible window: we are a background service.
             self.hold_guard.set(app.hold()).ok();
-            let window = ClippedWindow::new(&*app);
+            migrate_from_clipped();
+            let window = ClipperinoWindow::new(&*app);
             self.window.set(window.clone()).ok();
             // First run: explain before triggering GNOME's remote-desktop dialog.
             // Later runs: the stored token restores the session silently.
@@ -73,23 +74,23 @@ mod imp {
         }
     }
 
-    impl GtkApplicationImpl for ClippedApplication {}
-    impl AdwApplicationImpl for ClippedApplication {}
+    impl GtkApplicationImpl for ClipperinoApplication {}
+    impl AdwApplicationImpl for ClipperinoApplication {}
 }
 
 glib::wrapper! {
-    pub struct ClippedApplication(ObjectSubclass<imp::ClippedApplication>)
+    pub struct ClipperinoApplication(ObjectSubclass<imp::ClipperinoApplication>)
         @extends adw::Application, gtk::Application, gio::Application,
         @implements gio::ActionGroup, gio::ActionMap;
 }
 
-impl Default for ClippedApplication {
+impl Default for ClipperinoApplication {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ClippedApplication {
+impl ClipperinoApplication {
     pub fn new() -> Self {
         glib::Object::builder()
             .property("application-id", config::APP_ID)
@@ -102,7 +103,7 @@ impl ClippedApplication {
         provider.load_from_resource(&format!("{}/style.css", config::RESOURCE_PREFIX));
         // One notch above the user stylesheet (~/.config/gtk-4.0/gtk.css): a
         // third-party theme's generic `row` rules otherwise erase the card
-        // design. These rules only target Clipped's own widgets and classes.
+        // design. These rules only target Clipperino's own widgets and classes.
         gtk::style_context_add_provider_for_display(
             &gtk::gdk::Display::default().expect("no display"),
             &provider,
@@ -138,7 +139,7 @@ impl ClippedApplication {
             .build();
         let preferences = gio::ActionEntry::builder("preferences")
             .activate(|app: &Self, _, _| {
-                ClippedPreferences::default().present(app.active_window().as_ref());
+                ClipperinoPreferences::default().present(app.active_window().as_ref());
             })
             .build();
         self.add_action_entries([quit, about, preferences, shortcuts, hide]);
@@ -152,19 +153,9 @@ impl ClippedApplication {
 
     /// Open the portal session (permission dialog on first run) and start
     /// monitoring. On failure the window shows the permission page with retry.
-    fn connect_portal(&self, window: ClippedWindow) {
-        let token = Some(settings().string(settings::RESTORE_TOKEN).to_string())
-            .filter(|t| !t.is_empty())
-            .or_else(|| {
-                // Pre-GSettings builds kept the token in a file; migrate it once.
-                let legacy = glib::user_data_dir().join("clipped").join("restore-token");
-                let tok = std::fs::read_to_string(&legacy)
-                    .ok()
-                    .map(|s| s.trim().to_owned())
-                    .filter(|t| !t.is_empty());
-                std::fs::remove_file(&legacy).ok();
-                tok
-            });
+    fn connect_portal(&self, window: ClipperinoWindow) {
+        let token =
+            Some(settings().string(settings::RESTORE_TOKEN).to_string()).filter(|t| !t.is_empty());
         glib::spawn_future_local(glib::clone!(
             #[weak]
             window,
@@ -261,7 +252,7 @@ impl ClippedApplication {
                 let request = ashpd::desktop::background::Background::request()
                     .reason(reason.as_str())
                     .auto_start(enabled)
-                    .command(["clipped", "--gapplication-service"])
+                    .command(["clipperino", "--gapplication-service"])
                     .dbus_activatable(false);
                 match request.send().await.and_then(|r| r.response()) {
                     Ok(r) => tracing::info!(
@@ -487,9 +478,27 @@ impl ClippedApplication {
             .version(config::VERSION)
             .developer_name("djshiye")
             .license_type(gtk::License::MitX11)
-            .website("https://github.com/djshiye/clipped-fedora")
-            .issue_url("https://github.com/djshiye/clipped-fedora/issues")
+            .website("https://github.com/djshiye/Clipperino")
+            .issue_url("https://github.com/djshiye/Clipperino/issues")
             .build();
         dialog.present(self.active_window().as_ref());
     }
+}
+
+/// Clipperino was called Clipped before 1.1. Carry the history over once and
+/// drop the old login item, whose binary the package upgrade removed. Settings
+/// stay behind: the portal grants they held are tied to the old app ID.
+fn migrate_from_clipped() {
+    let data = glib::user_data_dir();
+    let (old, new) = (data.join("clipped"), data.join("clipperino"));
+    if old.is_dir() && !new.exists() {
+        match std::fs::rename(&old, &new) {
+            Ok(()) => tracing::info!("moved history from {}", old.display()),
+            Err(e) => tracing::warn!("could not move history from {}: {e}", old.display()),
+        }
+    }
+    let autostart = glib::user_config_dir()
+        .join("autostart")
+        .join("io.github.djshiye.Clipped.desktop");
+    std::fs::remove_file(autostart).ok();
 }

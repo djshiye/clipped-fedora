@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 (2026-09-29)
+
+- Renamed from Clipped to Clipperino: app ID `io.github.djshiye.Clipperino`,
+  binary and package `clipperino`. The RPM replaces `clipped` on upgrade, and
+  the clipboard history moves to `~/.local/share/clipperino` on first launch.
+  GNOME asks for the clipboard permission and the shortcut again, since both
+  are granted per app ID.
+- The tray menu opens as soon as the icon is clicked. GNOME's AppIndicator
+  extension used to wait out the double-click time first, because the status
+  item exported an `Activate` method; a vendored ksni (`third_party/ksni`) no
+  longer exports it.
+
 ## 1.0.0 (2026-09-28)
 
 Complete rewrite in Rust with GTK 4 and libadwaita, targeting Fedora GNOME on Wayland.

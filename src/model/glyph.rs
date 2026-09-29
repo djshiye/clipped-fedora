@@ -24,7 +24,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for Glyph {
-        const NAME: &'static str = "ClippedGlyph";
+        const NAME: &'static str = "ClipperinoGlyph";
         type Type = super::Glyph;
     }
 

@@ -7,8 +7,8 @@ mod imp {
     use super::*;
 
     #[derive(Default, CompositeTemplate)]
-    #[template(resource = "/io/github/djshiye/Clipped/ui/preferences.ui")]
-    pub struct ClippedPreferences {
+    #[template(resource = "/io/github/djshiye/Clipperino/ui/preferences.ui")]
+    pub struct ClipperinoPreferences {
         #[template_child]
         pub max_history_row: TemplateChild<adw::SpinRow>,
         #[template_child]
@@ -22,9 +22,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for ClippedPreferences {
-        const NAME: &'static str = "ClippedPreferences";
-        type Type = super::ClippedPreferences;
+    impl ObjectSubclass for ClipperinoPreferences {
+        const NAME: &'static str = "ClipperinoPreferences";
+        type Type = super::ClipperinoPreferences;
         type ParentType = adw::PreferencesDialog;
 
         fn class_init(klass: &mut Self::Class) {
@@ -36,7 +36,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for ClippedPreferences {
+    impl ObjectImpl for ClipperinoPreferences {
         fn constructed(&self) {
             self.parent_constructed();
             let s = settings();
@@ -58,28 +58,29 @@ mod imp {
             ));
         }
     }
-    impl WidgetImpl for ClippedPreferences {}
-    impl AdwDialogImpl for ClippedPreferences {}
-    impl PreferencesDialogImpl for ClippedPreferences {}
+    impl WidgetImpl for ClipperinoPreferences {}
+    impl AdwDialogImpl for ClipperinoPreferences {}
+    impl PreferencesDialogImpl for ClipperinoPreferences {}
 }
 
 glib::wrapper! {
-    pub struct ClippedPreferences(ObjectSubclass<imp::ClippedPreferences>)
+    pub struct ClipperinoPreferences(ObjectSubclass<imp::ClipperinoPreferences>)
         @extends adw::PreferencesDialog, adw::Dialog, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl Default for ClippedPreferences {
+impl Default for ClipperinoPreferences {
     fn default() -> Self {
         glib::Object::new()
     }
 }
 
-impl ClippedPreferences {
+impl ClipperinoPreferences {
     fn confirm_clear(&self) {
-        if let Some(app) = gtk::gio::Application::default()
-            .and_then(|a| a.downcast::<crate::application::ClippedApplication>().ok())
-        {
+        if let Some(app) = gtk::gio::Application::default().and_then(|a| {
+            a.downcast::<crate::application::ClipperinoApplication>()
+                .ok()
+        }) {
             app.confirm_clear_history();
         }
     }
