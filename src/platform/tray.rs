@@ -11,15 +11,14 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::{config, i18n::gettext};
 
 /// How many clips the menu lists (pinned first, then newest).
-pub const MENU_ITEMS: usize = 10;
-const LABEL_MAX_GRAPHEMES: usize = 44;
+pub const MENU_ITEMS: usize = 8;
+const LABEL_MAX_GRAPHEMES: usize = 36;
 
 #[derive(Debug, Clone)]
 pub enum TrayEvent {
     Toggle,
     Paste([u8; 32]),
     TogglePause,
-    ClearHistory,
     Preferences,
     Quit,
 }
@@ -28,8 +27,6 @@ pub enum TrayEvent {
 #[derive(Debug, Clone)]
 pub struct TrayItem {
     pub hash: [u8; 32],
-    /// Symbolic icon for the clip's type; empty for plain text.
-    pub icon_name: String,
     pub label: String,
     pub pinned: bool,
     /// Small PNG for image entries.
@@ -112,10 +109,12 @@ impl Tray for ClipperinoTray {
         };
         let clip = |item: &TrayItem| -> MenuItem<Self> {
             let hash = item.hash;
-            let icon_name = match (item.icon_png.is_some(), item.pinned) {
-                (true, _) => String::new(),
-                (false, true) => "view-pin-symbolic".into(),
-                (false, false) => item.icon_name.clone(),
+            // The Shell draws item icons on the right edge, so a type icon on
+            // every row reads as clutter: only pins and thumbnails get one.
+            let icon_name = if item.pinned && item.icon_png.is_none() {
+                "view-pin-symbolic".into()
+            } else {
+                String::new()
             };
             StandardItem {
                 label: item.label.clone(),
@@ -132,13 +131,9 @@ impl Tray for ClipperinoTray {
         if items.is_empty() {
             menu.push(header(gettext("No clips yet. Copy something.")));
         }
-        if !pinned.is_empty() {
-            menu.push(header(gettext("Pinned")));
-            menu.extend(pinned.iter().map(|i| clip(i)));
-            if !recent.is_empty() {
-                menu.push(MenuItem::Separator);
-                menu.push(header(gettext("Recent")));
-            }
+        menu.extend(pinned.iter().map(|i| clip(i)));
+        if !pinned.is_empty() && !recent.is_empty() {
+            menu.push(MenuItem::Separator);
         }
         menu.extend(recent.iter().map(|i| clip(i)));
 
@@ -158,16 +153,6 @@ impl Tray for ClipperinoTray {
                 label: gettext("Pause Recording"),
                 checked: self.state.paused,
                 activate: Box::new(|t: &mut Self| t.send(TrayEvent::TogglePause)),
-                ..Default::default()
-            }
-            .into(),
-        );
-        menu.push(
-            StandardItem {
-                label: gettext("Clear History…"),
-                icon_name: "edit-clear-all-symbolic".into(),
-                enabled: !items.is_empty(),
-                activate: Box::new(|t: &mut Self| t.send(TrayEvent::ClearHistory)),
                 ..Default::default()
             }
             .into(),

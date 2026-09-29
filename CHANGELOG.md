@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.1 (2026-09-29)
+
+- The **status icon menu** is less crowded: it lists 8 clips instead of 10,
+  labels are shorter, the Pinned and Recent headers are gone (pinned clips
+  keep their pin icon and sit above a separator), and type icons are shown
+  only for pins and images.
+- **Image thumbnails** in the menu are cropped to a square, so a wide
+  screenshot fills its icon instead of shrinking to a sliver. Image entries
+  read "Image · 14:32".
+- **Clear History…** is no longer in the status icon menu; it stays in
+  Preferences.
+
 ## 1.3.0 (2026-09-29)
 
 ### Images

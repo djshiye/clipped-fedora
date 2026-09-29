@@ -1,7 +1,7 @@
 %global app_id io.github.djshiye.Clipperino
 
 Name:           clipperino
-Version:        1.3.0
+Version:        1.3.1
 Release:        1%{?dist}
 Summary:        Clipboard history manager for GNOME
 
@@ -67,6 +67,10 @@ export RUSTFLAGS="%{build_rustflags}"
 %{_datadir}/metainfo/%{app_id}.metainfo.xml
 
 %changelog
+* Tue Sep 29 2026 djshiye <dreamfantom16@gmail.com> - 1.3.1-1
+- Tidier status icon menu: fewer rows, shorter labels, fewer icons
+- Square-cropped image thumbnails in the status icon menu
+
 * Tue Sep 29 2026 djshiye <dreamfantom16@gmail.com> - 1.3.0-1
 - Images gallery, filter chips and media cards for image clips
 - Day sections, type icons, colour swatches and hover previews

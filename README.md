@@ -120,9 +120,9 @@ the portals identify apps by their desktop entry.
 ### Build the RPM
 
 ```bash
-cargo vendor vendor && tar -cJf clipperino-1.3.0-vendor.tar.xz vendor
-# source tarball named clipperino-1.3.0.tar.gz with a clipperino-1.3.0/ prefix
-rpmdev-setuptree && cp clipperino-1.3.0*.tar.* ~/rpmbuild/SOURCES/
+cargo vendor vendor && tar -cJf clipperino-1.3.1-vendor.tar.xz vendor
+# source tarball named clipperino-1.3.1.tar.gz with a clipperino-1.3.1/ prefix
+rpmdev-setuptree && cp clipperino-1.3.1*.tar.* ~/rpmbuild/SOURCES/
 rpmbuild -ba build-aux/clipperino.spec
 ```
 

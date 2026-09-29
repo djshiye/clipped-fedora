@@ -343,7 +343,6 @@ impl ClipperinoApplication {
                             )
                             .ok();
                         }
-                        TrayEvent::ClearHistory => app.confirm_clear_history(),
                         TrayEvent::Preferences => {
                             if let Some(w) = app.imp().window.get() {
                                 w.present();
@@ -472,24 +471,16 @@ impl ClipperinoApplication {
                 } else {
                     None
                 };
-                let flavor = crate::model::Flavor::of(item.kind(), item.text().as_deref());
-                // Images all read "Image · W × H"; the time tells them apart.
+                // Images are told apart by time; the size is in the window.
                 // Absolute, because the menu is not refreshed as time passes.
                 let label = if item.kind() == ClipKind::Image {
-                    format!(
-                        "{} · {}",
-                        item.preview(),
-                        crate::ui::short_when(item.timestamp())
-                    )
+                    crate::i18n::gettext("Image · {time}")
+                        .replace("{time}", &crate::ui::short_when(item.timestamp()))
                 } else {
                     item.preview()
                 };
                 tray::TrayItem {
                     hash,
-                    icon_name: match flavor {
-                        crate::model::Flavor::Plain => String::new(),
-                        f => f.icon_name().to_owned(),
-                    },
                     label: tray::menu_label(&label),
                     pinned: item.pinned(),
                     icon_png,

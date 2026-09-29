@@ -147,8 +147,28 @@ fn texture_from_pixbuf(pb: &gdk_pixbuf::Pixbuf) -> gdk::Texture {
 
 /// A small PNG (for menu icons) rendered from the image file on disk.
 pub fn menu_icon_png(path: &str, size: i32) -> Option<Vec<u8>> {
-    let pb = gdk_pixbuf::Pixbuf::from_file_at_scale(path, size, size, true).ok()?;
-    flatten(&pb).save_to_bufferv("png", &[]).ok()
+    let pb = gdk_pixbuf::Pixbuf::from_file(path).ok()?;
+    flatten(&square_crop(&pb, size)?)
+        .save_to_bufferv("png", &[])
+        .ok()
+}
+
+/// Scale `pb` so its short side is `size`, then keep the centred square: a
+/// menu icon is tiny, so a wide screenshot must fill it rather than shrink to
+/// a sliver.
+fn square_crop(pb: &gdk_pixbuf::Pixbuf, size: i32) -> Option<gdk_pixbuf::Pixbuf> {
+    let (w, h) = (pb.width(), pb.height());
+    let short = w.min(h).max(1);
+    let size = size.min(short);
+    let sw = (i64::from(w) * i64::from(size) / i64::from(short)).max(i64::from(size)) as i32;
+    let sh = (i64::from(h) * i64::from(size) / i64::from(short)).max(i64::from(size)) as i32;
+    let scaled = pb.scale_simple(sw, sh, gdk_pixbuf::InterpType::Bilinear)?;
+    Some(
+        scaled
+            .new_subpixbuf((sw - size) / 2, (sh - size) / 2, size, size)
+            .copy()
+            .unwrap_or(scaled),
+    )
 }
 
 /// A 1 × 1 texture of `rgba`, stretched into a colour swatch.
@@ -162,4 +182,24 @@ pub fn swatch(rgba: [f32; 4]) -> gdk::Texture {
         4,
     )
     .upcast()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pixbuf(w: i32, h: i32) -> gdk_pixbuf::Pixbuf {
+        gdk_pixbuf::Pixbuf::new(gdk_pixbuf::Colorspace::Rgb, false, 8, w, h).unwrap()
+    }
+
+    #[test]
+    fn menu_icons_are_centred_squares() {
+        for (w, h) in [(1920, 1080), (300, 2000), (64, 64)] {
+            let sq = square_crop(&pixbuf(w, h), 48).unwrap();
+            assert_eq!((sq.width(), sq.height()), (48, 48));
+        }
+        // Never upscaled.
+        let sq = square_crop(&pixbuf(20, 10), 48).unwrap();
+        assert_eq!((sq.width(), sq.height()), (10, 10));
+    }
 }
