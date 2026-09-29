@@ -8,7 +8,7 @@ use crate::{
     model::{ClipItem, ClipKind, HistoryStore},
     platform::portal::{ClipEvent, Offer, PortalSession},
     settings::{self, settings},
-    ui::{DetailDialog, GlyphPage, HistoryRow},
+    ui::{DetailDialog, GlyphPage, HistoryRow, ImageTile},
 };
 
 mod imp {
@@ -27,6 +27,12 @@ mod imp {
         pub history_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub history_list: TemplateChild<gtk::ListView>,
+        #[template_child]
+        pub gallery: TemplateChild<gtk::GridView>,
+        #[template_child]
+        pub kind_chips: TemplateChild<adw::ToggleGroup>,
+        #[template_child]
+        pub no_results_page: TemplateChild<adw::StatusPage>,
         #[template_child]
         pub grant_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -54,10 +60,15 @@ mod imp {
         pub selection: RefCell<Option<gtk::SingleSelection>>,
         pub preview_binding: RefCell<Option<glib::Binding>>,
         pub portal: Rc<RefCell<Option<Rc<PortalSession>>>>,
-        /// Every row the factory created (rows are recycled, so this stays
-        /// small); the clock ticks their relative times.
-        pub rows: RefCell<Vec<glib::WeakRef<HistoryRow>>>,
         pub clock: RefCell<Option<glib::SourceId>>,
+        /// Which kind the chips show; `None` is All.
+        pub kind: Rc<std::cell::Cell<Option<ClipKind>>>,
+        pub kind_filter: RefCell<Option<gtk::CustomFilter>>,
+        /// Local midnight the sections are computed against.
+        pub today: Rc<std::cell::Cell<i64>>,
+        pub section_sorter: RefCell<Option<gtk::CustomSorter>>,
+        /// Bumped per preview; a full-size load that finishes late is dropped.
+        pub preview_generation: std::cell::Cell<u64>,
     }
 
     #[glib::object_subclass]
@@ -116,7 +127,10 @@ impl ClipperinoWindow {
     fn setup_list(&self) {
         let imp = self.imp();
 
-        // history (ListStore) -> StringFilter on the clip's text -> SingleSelection -> ListView
+        // history (ListStore)
+        //   -> filter: search text AND kind chip
+        //   -> sections by day: Today, Yesterday, Last 7 Days, Earlier
+        //   -> SingleSelection, shared by the list and the Images gallery
         let expr = gtk::ClosureExpression::with_callback(&[] as &[gtk::Expression], |args| {
             args[0]
                 .get::<ClipItem>()
@@ -128,26 +142,44 @@ impl ClipperinoWindow {
             .ignore_case(true)
             .match_mode(gtk::StringFilterMatchMode::Substring)
             .build();
+        let kind = imp.kind.clone();
+        let kind_filter = gtk::CustomFilter::new(move |obj| {
+            let wanted = kind.get();
+            obj.downcast_ref::<ClipItem>()
+                .is_some_and(|item| wanted.is_none_or(|k| item.kind() == k))
+        });
+        let every = gtk::EveryFilter::new();
+        every.append(filter.clone());
+        every.append(kind_filter.clone());
         let filter_model =
-            gtk::FilterListModel::new(Some(imp.history.model().clone()), Some(filter.clone()));
+            gtk::FilterListModel::new(Some(imp.history.model().clone()), Some(every));
+
+        imp.today.set(crate::ui::today_start());
+        let today = imp.today.clone();
+        let section_of = move |obj: &glib::Object| {
+            let item = obj
+                .downcast_ref::<ClipItem>()
+                .expect("history holds ClipItems");
+            crate::ui::Section::of(item.timestamp(), today.get())
+        };
+        // Stable: within a section, items keep their newest-first order.
+        let section_sorter =
+            gtk::CustomSorter::new(move |a, b| section_of(a).cmp(&section_of(b)).into());
+        let sorted = gtk::SortListModel::new(Some(filter_model.clone()), None::<gtk::Sorter>);
+        sorted.set_section_sorter(Some(&section_sorter));
+
         // Always keep a selected row so Enter in the search field has a target.
         let selection = gtk::SingleSelection::builder()
-            .model(&filter_model)
+            .model(&sorted)
             .autoselect(true)
             .can_unselect(false)
             .build();
 
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(glib::clone!(
-            #[weak(rename_to = win)]
-            self,
-            move |_, item| {
-                let item = item.downcast_ref::<gtk::ListItem>().unwrap();
-                let row = HistoryRow::default();
-                win.imp().rows.borrow_mut().push(row.downgrade());
-                item.set_child(Some(&row));
-            }
-        ));
+        factory.connect_setup(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().unwrap();
+            item.set_child(Some(&HistoryRow::default()));
+        });
         factory.connect_bind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().unwrap();
             let row = item.child().and_downcast::<HistoryRow>().unwrap();
@@ -161,26 +193,81 @@ impl ClipperinoWindow {
             }
         });
 
+        let headers = gtk::SignalListItemFactory::new();
+        headers.connect_setup(|_, header| {
+            let header = header.downcast_ref::<gtk::ListHeader>().unwrap();
+            let label = gtk::Label::builder()
+                .xalign(0.0)
+                .css_classes(["clip-section"])
+                .build();
+            header.set_child(Some(&label));
+        });
+        let today = imp.today.clone();
+        headers.connect_bind(move |_, header| {
+            let header = header.downcast_ref::<gtk::ListHeader>().unwrap();
+            let (Some(label), Some(item)) = (
+                header.child().and_downcast::<gtk::Label>(),
+                header.item().and_downcast::<ClipItem>(),
+            ) else {
+                return;
+            };
+            let section = crate::ui::Section::of(item.timestamp(), today.get());
+            label.set_label(&section.title());
+        });
+
+        let tiles = gtk::SignalListItemFactory::new();
+        tiles.connect_setup(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().unwrap();
+            item.set_child(Some(&ImageTile::default()));
+        });
+        tiles.connect_bind(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().unwrap();
+            let tile = item.child().and_downcast::<ImageTile>().unwrap();
+            let clip = item.item().and_downcast::<ClipItem>().unwrap();
+            tile.bind(&clip);
+        });
+        tiles.connect_unbind(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().unwrap();
+            if let Some(tile) = item.child().and_downcast::<ImageTile>() {
+                tile.unbind();
+            }
+        });
+
         imp.history_list.set_model(Some(&selection));
         imp.history_list.set_factory(Some(&factory));
-        imp.history_list.connect_activate(glib::clone!(
+        imp.history_list.set_header_factory(Some(&headers));
+        imp.gallery.set_model(Some(&selection));
+        imp.gallery.set_factory(Some(&tiles));
+        let on_activate = glib::clone!(
             #[weak(rename_to = win)]
             self,
-            move |list, pos| {
-                if let Some(clip) = list
-                    .model()
-                    .and_then(|m| m.item(pos))
-                    .and_downcast::<ClipItem>()
-                {
+            move |pos: u32| {
+                if let Some(clip) = win.item_at(pos) {
                     win.activate_item(&clip);
                 }
             }
-        ));
+        );
+        let activate = on_activate.clone();
+        imp.history_list
+            .connect_activate(move |_, pos| activate(pos));
+        imp.gallery.connect_activate(move |_, pos| on_activate(pos));
 
         filter_model.connect_items_changed(glib::clone!(
             #[weak(rename_to = win)]
             self,
             move |_, _, _, _| win.update_empty_state()
+        ));
+
+        // Widening the window reveals the pane: load the full-size image then.
+        imp.preview_pane.connect_visible_notify(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |pane| {
+                if pane.is_visible() {
+                    let item = win.selected_item().map(|(_, i)| i);
+                    win.update_preview(item.as_ref());
+                }
+            }
         ));
 
         selection.connect_selected_item_notify(glib::clone!(
@@ -189,9 +276,91 @@ impl ClipperinoWindow {
             move |sel| win.update_preview(sel.selected_item().and_downcast::<ClipItem>().as_ref())
         ));
 
+        imp.kind_chips.connect_active_name_notify(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            move |chips| {
+                let kind = match chips.active_name().as_deref() {
+                    Some("text") => Some(ClipKind::Text),
+                    Some("images") => Some(ClipKind::Image),
+                    Some("files") => Some(ClipKind::Files),
+                    _ => None,
+                };
+                let imp = win.imp();
+                imp.kind.set(kind);
+                if let Some(f) = imp.kind_filter.borrow().as_ref() {
+                    f.changed(gtk::FilterChange::Different);
+                }
+                win.update_empty_state();
+                // A new view starts at its newest item.
+                if let Some(sel) = imp.selection.borrow().as_ref()
+                    && sel.n_items() > 0
+                {
+                    sel.set_selected(0);
+                    win.scroll_to(0);
+                }
+            }
+        ));
+
         imp.filter.replace(Some(filter));
+        imp.kind_filter.replace(Some(kind_filter));
         imp.filter_model.replace(Some(filter_model));
+        imp.section_sorter.replace(Some(section_sorter));
         imp.selection.replace(Some(selection));
+    }
+
+    /// Re-sort into day sections at midnight, keeping `keep` selected if it was.
+    fn resort(&self, keep: Option<&ClipItem>) {
+        let imp = self.imp();
+        let was_selected = self
+            .selected_item()
+            .is_some_and(|(_, sel)| keep.is_some_and(|k| *k == sel));
+        if let Some(sorter) = imp.section_sorter.borrow().as_ref() {
+            sorter.changed(gtk::SorterChange::Different);
+        }
+        let (Some(item), true) = (keep, was_selected) else {
+            return;
+        };
+        let Some(sel) = imp.selection.borrow().clone() else {
+            return;
+        };
+        if let Some(pos) = (0..sel.n_items()).find(|&i| {
+            sel.item(i)
+                .and_downcast::<ClipItem>()
+                .is_some_and(|it| it == *item)
+        }) {
+            sel.set_selected(pos);
+            self.scroll_to(pos);
+        }
+    }
+
+    fn gallery_shown(&self) -> bool {
+        self.imp().history_stack.visible_child_name().as_deref() == Some("gallery")
+    }
+
+    fn scroll_to(&self, pos: u32) {
+        let imp = self.imp();
+        // Position 0: scroll fully up, so its section header shows too.
+        if pos == 0 {
+            let view: gtk::Widget = if self.gallery_shown() {
+                imp.gallery.get().upcast()
+            } else {
+                imp.history_list.get().upcast()
+            };
+            if let Some(sw) = view
+                .ancestor(gtk::ScrolledWindow::static_type())
+                .and_downcast::<gtk::ScrolledWindow>()
+            {
+                sw.vadjustment().set_value(0.0);
+                return;
+            }
+        }
+        if self.gallery_shown() {
+            imp.gallery.scroll_to(pos, gtk::ListScrollFlags::NONE, None);
+        } else {
+            imp.history_list
+                .scroll_to(pos, gtk::ListScrollFlags::NONE, None);
+        }
     }
 
     /// Wide layout: the pane beside the list mirrors the selected item.
@@ -206,13 +375,16 @@ impl ClipperinoWindow {
         };
         match item.kind() {
             ClipKind::Image => {
-                // Bind rather than copy: restored thumbnails arrive asynchronously.
+                // The thumbnail shows at once (bound: restored thumbnails arrive
+                // asynchronously); the full-size image replaces it when loaded,
+                // since the pane is far larger than a thumbnail.
                 let b = item
                     .bind_property("thumbnail", &*imp.preview_picture, "paintable")
                     .sync_create()
                     .build();
                 imp.preview_binding.replace(Some(b));
                 imp.preview_stack.set_visible_child_name("image");
+                self.load_full_preview(item);
             }
             _ => {
                 let text = item.text().unwrap_or_default();
@@ -226,7 +398,39 @@ impl ClipperinoWindow {
                 imp.preview_stack.set_visible_child_name("text");
             }
         }
+        if item.kind() != ClipKind::Image {
+            imp.preview_generation.set(imp.preview_generation.get() + 1);
+        }
         imp.preview_meta.set_label(&self.preview_caption(item));
+    }
+
+    fn load_full_preview(&self, item: &ClipItem) {
+        let imp = self.imp();
+        let generation = imp.preview_generation.get() + 1;
+        imp.preview_generation.set(generation);
+        // Only the wide layout shows the pane; skip the decode otherwise.
+        let (Some(path), true) = (item.image_path(), imp.preview_pane.is_visible()) else {
+            return;
+        };
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = win)]
+            self,
+            async move {
+                let loaded =
+                    gio::spawn_blocking(move || crate::model::images::preview_from_file(&path))
+                        .await;
+                let imp = win.imp();
+                if imp.preview_generation.get() != generation {
+                    return;
+                }
+                if let Ok(Ok(texture)) = loaded {
+                    if let Some(b) = imp.preview_binding.take() {
+                        b.unbind();
+                    }
+                    imp.preview_picture.set_paintable(Some(&texture));
+                }
+            }
+        ));
     }
 
     /// "5 min ago · 120 characters"
@@ -323,11 +527,27 @@ impl ClipperinoWindow {
         });
     }
 
-    /// While the window is shown, keep "5 min ago" labels current; refresh
-    /// at once on show, since rows are not rebound while hidden.
+    /// While the window is shown, keep the preview's "5 min ago" current and
+    /// move clips to Yesterday at midnight; check at once on show.
     fn setup_clock(&self) {
         self.connect_map(|win| {
             win.refresh_times();
+            // Open on the newest clip, scrolled fully up so its day header
+            // shows; after layout, since the list sizes itself on map.
+            glib::idle_add_local_once(glib::clone!(
+                #[weak]
+                win,
+                move || {
+                    let sel = win.imp().selection.borrow().clone();
+                    if let Some(sel) = sel
+                        && sel.n_items() > 0
+                        && win.imp().search_entry.text().is_empty()
+                    {
+                        sel.set_selected(0);
+                        win.scroll_to(0);
+                    }
+                }
+            ));
             let id = glib::timeout_add_seconds_local(
                 30,
                 glib::clone!(
@@ -354,13 +574,10 @@ impl ClipperinoWindow {
 
     fn refresh_times(&self) {
         let imp = self.imp();
-        imp.rows.borrow_mut().retain(|r| match r.upgrade() {
-            Some(row) => {
-                row.refresh_time();
-                true
-            }
-            None => false,
-        });
+        let today = crate::ui::today_start();
+        if imp.today.replace(today) != today {
+            self.resort(self.selected_item().map(|(_, i)| i).as_ref());
+        }
         // Only the time in the preview caption; re-setting the text would
         // drop the user's selection in it.
         if let Some((_, item)) = self.selected_item() {
@@ -455,13 +672,23 @@ impl ClipperinoWindow {
         Some((pos, item))
     }
 
+    /// The item at `pos` in the visible (filtered, sectioned) order.
     fn item_at(&self, pos: u32) -> Option<ClipItem> {
         self.imp()
-            .filter_model
+            .selection
             .borrow()
             .as_ref()?
             .item(pos)
             .and_downcast::<ClipItem>()
+    }
+
+    /// Up/Down move a whole row of tiles in the gallery.
+    fn row_step(&self) -> i32 {
+        if self.gallery_shown() {
+            self.imp().gallery.max_columns().max(1) as i32
+        } else {
+            1
+        }
     }
 
     fn move_selection(&self, delta: i32) {
@@ -480,8 +707,7 @@ impl ClipperinoWindow {
         };
         let next = (cur + delta).clamp(0, n as i32 - 1) as u32;
         sel.set_selected(next);
-        imp.history_list
-            .scroll_to(next, gtk::ListScrollFlags::NONE, None);
+        self.scroll_to(next);
     }
 
     fn setup_actions(&self) {
@@ -552,11 +778,20 @@ impl ClipperinoWindow {
                 }
             })
             .build();
+        // "all", "text", "images" or "files": the kind chips, from the keyboard.
+        let show_kind = gio::ActionEntry::builder("show-kind")
+            .parameter_type(Some(&String::static_variant_type()))
+            .activate(|win: &Self, _, param| {
+                if let Some(name) = param.and_then(|p| p.get::<String>()) {
+                    win.imp().kind_chips.set_active_name(Some(&name));
+                }
+            })
+            .build();
         let select_next = gio::ActionEntry::builder("select-next")
-            .activate(|win: &Self, _, _| win.move_selection(1))
+            .activate(|win: &Self, _, _| win.move_selection(win.row_step()))
             .build();
         let select_previous = gio::ActionEntry::builder("select-previous")
-            .activate(|win: &Self, _, _| win.move_selection(-1))
+            .activate(|win: &Self, _, _| win.move_selection(-win.row_step()))
             .build();
         let focus_search = gio::ActionEntry::builder("focus-search")
             .activate(|win: &Self, _, _| win.focus_search())
@@ -576,6 +811,7 @@ impl ClipperinoWindow {
             select_previous,
             focus_search,
             show_page,
+            show_kind,
         ]);
         self.setup_debug_actions();
     }
@@ -590,21 +826,65 @@ impl ClipperinoWindow {
         {
             let history = &self.imp().history;
             let t = std::time::Instant::now();
+            let now = glib::DateTime::now_local()
+                .map(|d| d.to_unix())
+                .unwrap_or_default();
             for i in 0..n {
-                let text = match i % 4 {
+                let text = match i % 7 {
                     0 => format!("Seed item {i}: the quick brown fox jumps over the lazy dog"),
                     1 => format!("fn seed_{i}() {{\n    println!(\"{i}\");\n}}"),
-                    2 => format!("https://example.com/path/{i}?query=seed&n={i}"),
+                    2 => format!("https://gitlab.gnome.org/GNOME/gtk/-/issues/{i}"),
+                    3 => "#3584e4".to_owned(),
+                    4 => format!("someone{i}@example.org"),
                     _ => format!("Seed {i} ünïcödé ✓ — multi\nline\nentry"),
                 };
-                history.append_restored(ClipItem::new_text(text));
+                // Every third item is an image, so image rows sit among text rows.
+                let item = (i % 3 == 2)
+                    .then(|| debug_image(i))
+                    .flatten()
+                    .unwrap_or_else(|| ClipItem::new_text(text));
+                // Spread over the last week or two so every section shows; pin two.
+                item.set_timestamp(now - i64::from(i) * 5 * 3600);
+                item.set_pinned(i == 4 || i == 11);
+                history.append_restored(item);
             }
             tracing::info!(n, elapsed = ?t.elapsed(), "seeded synthetic history (not persisted)");
         }
         let scroll = gio::ActionEntry::builder("debug-scroll")
             .activate(|win: &Self, _, _| win.debug_scroll())
             .build();
-        self.add_action_entries([scroll]);
+        let snapshot = gio::ActionEntry::builder("debug-snapshot")
+            .parameter_type(Some(&String::static_variant_type()))
+            .activate(|win: &Self, _, param| {
+                if let Some(path) = param.and_then(|p| p.get::<String>()) {
+                    win.debug_snapshot(&path);
+                }
+            })
+            .build();
+        self.add_action_entries([scroll, snapshot]);
+    }
+
+    /// Render the window at 2x into a PNG, for design reviews without the
+    /// Screenshot portal (works in nested or private sessions).
+    #[cfg(debug_assertions)]
+    fn debug_snapshot(&self, path: &str) {
+        let (w, h) = (self.width() as f64, self.height() as f64);
+        let paintable = gtk::WidgetPaintable::new(Some(self));
+        let snapshot = gtk::Snapshot::new();
+        snapshot.scale(2.0, 2.0);
+        paintable.snapshot(&snapshot, w, h);
+        let Some(node) = snapshot.to_node() else {
+            tracing::warn!("debug-snapshot: nothing rendered");
+            return;
+        };
+        let Some(renderer) = self.renderer() else {
+            tracing::warn!("debug-snapshot: window not realized");
+            return;
+        };
+        match renderer.render_texture(&node, None).save_to_png(path) {
+            Ok(()) => tracing::info!(path, "debug-snapshot saved"),
+            Err(e) => tracing::warn!("debug-snapshot: {e}"),
+        }
     }
 
     /// Animate the history list to the bottom over 3 s and log frame-interval
@@ -692,6 +972,31 @@ impl ClipperinoWindow {
         add("<Control>f", "win.focus-search");
         add("<Control>p", "win.pin-selected");
         add("<Control>d", "win.show-selected");
+        // Left/Right step through gallery tiles, but only while the search
+        // field is empty: otherwise they move its text cursor.
+        for (trigger, delta) in [("Left", -1), ("Right", 1)] {
+            controller.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(trigger),
+                Some(gtk::CallbackAction::new(move |w, _| {
+                    let Some(win) = w.downcast_ref::<Self>() else {
+                        return glib::Propagation::Proceed;
+                    };
+                    if win.gallery_shown() && win.imp().search_entry.text().is_empty() {
+                        win.move_selection(delta);
+                        glib::Propagation::Stop
+                    } else {
+                        glib::Propagation::Proceed
+                    }
+                })),
+            ));
+        }
+        for (n, kind) in ["all", "text", "images", "files"].iter().enumerate() {
+            controller.add_shortcut(gtk::Shortcut::with_arguments(
+                gtk::ShortcutTrigger::parse_string(&format!("<Alt>{}", n + 1)),
+                Some(gtk::NamedAction::new("win.show-kind")),
+                &kind.to_variant(),
+            ));
+        }
         for n in 1..=9u32 {
             controller.add_shortcut(gtk::Shortcut::with_arguments(
                 gtk::ShortcutTrigger::parse_string(&format!("<Control>{n}")),
@@ -859,10 +1164,27 @@ impl ClipperinoWindow {
             .as_ref()
             .map(|m| m.n_items())
             .unwrap_or(0);
+        let kind = imp.kind.get();
         let page = if imp.history.is_empty() {
             "empty"
         } else if filtered == 0 {
+            let searching = !imp.search_entry.text().is_empty();
+            let title = match kind {
+                _ if searching => gettext("No Results"),
+                Some(ClipKind::Image) => gettext("No Images"),
+                Some(ClipKind::Files) => gettext("No Files"),
+                Some(ClipKind::Text) => gettext("No Text"),
+                None => gettext("No Results"),
+            };
+            imp.no_results_page.set_title(&title);
+            imp.no_results_page.set_description(
+                (!searching && kind.is_some())
+                    .then(|| gettext("Copied items of this kind will appear here."))
+                    .as_deref(),
+            );
             "no-results"
+        } else if kind == Some(ClipKind::Image) {
+            "gallery"
         } else {
             "list"
         };
@@ -989,6 +1311,71 @@ async fn offer_for(item: &ClipItem) -> Option<Offer> {
             .map(|t| Offer::Files(t.lines().map(str::to_owned).collect())),
         ClipKind::Text => item.text().map(Offer::Text),
     }
+}
+
+/// Debug seed: synthetic images of assorted shapes (screenshot, photo, logo
+/// with transparency, tall receipt, wide banner), so image rows can be judged
+/// without real clipboard content.
+#[cfg(debug_assertions)]
+fn debug_image(i: u32) -> Option<ClipItem> {
+    use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
+    let rgba = |c: u32| (c << 8) | 0xff;
+    let hues = [0x3584e4, 0x2ec27e, 0xe66100, 0x9141ac, 0xe01b24, 0xf6d32d];
+    let hue = hues[(i as usize / 3) % hues.len()];
+    let (w, h, bg) = match (i / 3) % 5 {
+        0 => (1920, 1080, 0xf6f5f4),
+        1 => (1600, 1200, hue),
+        2 => (256, 256, 0),
+        3 => (500, 1400, 0xffffff),
+        _ => (1500, 320, 0x241f31),
+    };
+    let pb = Pixbuf::new(Colorspace::Rgb, true, 8, w, h)?;
+    pb.fill(if bg == 0 { 0 } else { rgba(bg) });
+    let rect = |x: i32, y: i32, rw: i32, rh: i32, c: u32| {
+        pb.new_subpixbuf(x, y, rw.min(w - x), rh.min(h - y))
+            .fill(rgba(c));
+    };
+    match (i / 3) % 5 {
+        0 => {
+            rect(0, 0, w, 60, 0x303030);
+            rect(0, 60, 320, h - 60, 0xdeddda);
+            for k in 0..6 {
+                rect(
+                    380,
+                    120 + k * 150,
+                    1400,
+                    100,
+                    if k == 1 { hue } else { 0xc0bfbc },
+                );
+            }
+        }
+        1 => {
+            for k in 0..12 {
+                rect(0, k * 100, w, 50, hue ^ (k as u32 * 0x0a0a0a));
+            }
+            rect(500, 350, 600, 500, 0xffffff);
+        }
+        2 => {
+            rect(48, 48, 160, 160, hue);
+            rect(96, 96, 64, 64, 0xffffff);
+        }
+        3 => {
+            for k in 0..20 {
+                rect(40, 60 + k * 64, 300 + (k % 3) * 40, 20, 0x9a9996);
+            }
+            rect(40, 1330, 420, 30, hue);
+        }
+        _ => {
+            rect(60, 60, 200, 200, hue);
+            rect(320, 110, 900, 40, 0xffffff);
+            rect(320, 180, 600, 30, 0x9a9996);
+        }
+    }
+    let png = pb.save_to_bufferv("png", &[]).ok()?;
+    let d = crate::model::images::decode(&png).ok()?;
+    let item = ClipItem::new_image(png, d.pixel_hash, d.width, d.height);
+    item.set_thumbnail(Some(d.thumbnail));
+    Some(item)
 }
 
 /// What `deliver` does once the clipboard is set.

@@ -1,60 +1,90 @@
 using Gtk 4.0;
 
 template $ClipperinoHistoryRow : Box {
-  orientation: horizontal;
-  spacing: 12;
+  orientation: vertical;
+  spacing: 8;
   margin-start: 12;
   margin-end: 8;
   margin-top: 10;
   margin-bottom: 10;
 
-  Image icon {
-    icon-name: "text-x-generic-symbolic";
-    pixel-size: 16;
-    valign: center;
-    styles ["clip-kind-icon"]
-  }
-
-  Picture picture {
+  // Image clips: a wide, cropped preview above the caption. The backdrop
+  // sets the size; the picture is an overlay, so its own size never
+  // stretches the row.
+  Overlay media {
     visible: false;
-    content-fit: cover;
-    width-request: 52;
-    height-request: 52;
-    valign: center;
-    styles ["clip-thumbnail"]
+    margin-end: 4;
+    overflow: hidden;
+    styles ["clip-media"]
+
+    child: Box {
+      height-request: 132;
+      hexpand: true;
+    };
+
+    [overlay]
+    Picture media_picture {
+      content-fit: cover;
+      can-shrink: true;
+    }
   }
 
   Box {
-    orientation: vertical;
-    spacing: 2;
-    hexpand: true;
-    valign: center;
+    orientation: horizontal;
+    spacing: 12;
 
-    Label preview {
-      xalign: 0;
-      ellipsize: end;
-      lines: 2;
-      wrap: true;
-      wrap-mode: word_char;
+    Image icon {
+      icon-name: "text-x-generic-symbolic";
+      pixel-size: 16;
+      valign: center;
+      styles ["clip-kind-icon"]
     }
 
-    Label time {
-      xalign: 0;
-      styles ["caption", "dim-label"]
+    Picture swatch {
+      visible: false;
+      width-request: 32;
+      height-request: 32;
+      can-shrink: true;
+      content-fit: fill;
+      valign: center;
+      overflow: hidden;
+      styles ["clip-swatch"]
     }
-  }
 
-  Image pin_icon {
-    icon-name: "view-pin-symbolic";
-    visible: false;
-    valign: center;
-    styles ["accent"]
-  }
+    Box {
+      orientation: vertical;
+      spacing: 2;
+      hexpand: true;
+      valign: center;
 
-  MenuButton more_button {
-    icon-name: "view-more-symbolic";
-    valign: center;
-    tooltip-text: _("More Actions");
-    styles ["flat", "circular"]
+      Label preview {
+        xalign: 0;
+        ellipsize: end;
+        lines: 2;
+        wrap: true;
+        wrap-mode: word_char;
+      }
+
+      Label caption {
+        visible: false;
+        xalign: 0;
+        ellipsize: end;
+        styles ["caption", "dim-label"]
+      }
+    }
+
+    Image pin_icon {
+      icon-name: "view-pin-symbolic";
+      visible: false;
+      valign: center;
+      styles ["accent"]
+    }
+
+    MenuButton more_button {
+      icon-name: "view-more-symbolic";
+      valign: center;
+      tooltip-text: _("More Actions");
+      styles ["flat", "circular"]
+    }
   }
 }

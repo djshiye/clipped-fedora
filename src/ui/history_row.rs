@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 
 use adw::{prelude::*, subclass::prelude::*};
-use gtk::{CompositeTemplate, gio, glib};
+use gtk::{CompositeTemplate, glib};
 
 use crate::{
     i18n::gettext,
-    model::{ClipItem, ClipKind},
+    model::{ClipItem, ClipKind, Flavor},
 };
 
 mod imp {
@@ -15,13 +15,17 @@ mod imp {
     #[template(resource = "/io/github/djshiye/Clipperino/ui/history_row.ui")]
     pub struct HistoryRow {
         #[template_child]
+        pub media: TemplateChild<gtk::Overlay>,
+        #[template_child]
+        pub media_picture: TemplateChild<gtk::Picture>,
+        #[template_child]
         pub icon: TemplateChild<gtk::Image>,
         #[template_child]
-        pub picture: TemplateChild<gtk::Picture>,
+        pub swatch: TemplateChild<gtk::Picture>,
         #[template_child]
         pub preview: TemplateChild<gtk::Label>,
         #[template_child]
-        pub time: TemplateChild<gtk::Label>,
+        pub caption: TemplateChild<gtk::Label>,
         #[template_child]
         pub pin_icon: TemplateChild<gtk::Image>,
         #[template_child]
@@ -29,7 +33,6 @@ mod imp {
         pub bindings: RefCell<Vec<glib::Binding>>,
         pub item: RefCell<Option<ClipItem>>,
         pub pinned_handler: RefCell<Option<glib::SignalHandlerId>>,
-        pub menu: RefCell<Option<gio::Menu>>,
         pub context_menu: RefCell<Option<gtk::PopoverMenu>>,
     }
 
@@ -53,16 +56,23 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             // Right-click opens the same menu as the ⋮ button.
-            let gesture = gtk::GestureClick::builder().button(3).build();
-            gesture.connect_pressed(glib::clone!(
-                #[weak]
-                obj,
-                move |gesture, _, x, y| {
-                    gesture.set_state(gtk::EventSequenceState::Claimed);
-                    obj.show_context_menu(x, y);
-                }
-            ));
-            obj.add_controller(gesture);
+            let popover = gtk::PopoverMenu::from_model(None::<&gtk::gio::MenuModel>);
+            popover.set_parent(&*obj);
+            popover.set_has_arrow(false);
+            let weak = obj.downgrade();
+            crate::ui::attach_context_menu(&*obj, &popover.downgrade(), move || {
+                weak.upgrade()?
+                    .imp()
+                    .item
+                    .borrow()
+                    .as_ref()
+                    .map(crate::ui::item_menu)
+            });
+            self.context_menu.replace(Some(popover));
+            let weak = obj.downgrade();
+            crate::ui::attach_image_tooltip(&*self.media, move || {
+                weak.upgrade()?.imp().item.borrow().clone()
+            });
         }
 
         fn dispose(&self) {
@@ -92,34 +102,59 @@ impl HistoryRow {
         let imp = self.imp();
         imp.item.replace(Some(item.clone()));
         imp.preview.set_label(&item.preview());
-        let code = item.kind() == ClipKind::Text
-            && item.text().is_some_and(|t| crate::ui::looks_like_code(&t));
-        if code {
+        let text = item.text();
+        let flavor = Flavor::of(item.kind(), text.as_deref());
+        if flavor == Flavor::Code {
             imp.preview.add_css_class("monospace");
         } else {
             imp.preview.remove_css_class("monospace");
         }
-        self.refresh_time();
-        match item.kind() {
-            ClipKind::Image => {
+
+        let is_image = item.kind() == ClipKind::Image;
+        imp.media.set_visible(is_image);
+        if is_image {
+            let b = item
+                .bind_property("thumbnail", &*imp.media_picture, "paintable")
+                .sync_create()
+                .build();
+            imp.bindings.borrow_mut().push(b);
+        } else {
+            imp.media_picture.set_paintable(gtk::gdk::Paintable::NONE);
+        }
+
+        // Leading slot: a colour swatch for colour codes, else the type icon.
+        // Image cards need neither: the picture says it.
+        match &flavor {
+            Flavor::Color(rgba) => {
+                imp.swatch
+                    .set_paintable(Some(&crate::model::images::swatch(*rgba)));
+                imp.swatch.set_visible(true);
                 imp.icon.set_visible(false);
-                let b = item
-                    .bind_property("thumbnail", &*imp.picture, "paintable")
-                    .sync_create()
-                    .build();
-                imp.bindings.borrow_mut().push(b);
-                imp.picture.set_visible(true);
             }
-            kind => {
-                imp.picture.set_visible(false);
-                imp.picture.set_paintable(gtk::gdk::Paintable::NONE);
-                imp.icon.set_icon_name(Some(match kind {
-                    ClipKind::Files => "folder-symbolic",
-                    _ => "text-x-generic-symbolic",
-                }));
+            Flavor::Image => {
+                imp.swatch.set_visible(false);
+                imp.icon.set_visible(false);
+            }
+            f => {
+                imp.swatch.set_visible(false);
+                imp.icon.set_icon_name(Some(f.icon_name()));
                 imp.icon.set_visible(true);
             }
         }
+
+        let caption = match &flavor {
+            Flavor::Link { domain } => domain.clone(),
+            Flavor::Email => gettext("Email address"),
+            // Cards carry their time (hovering one shows the picture instead).
+            Flavor::Image => crate::ui::short_when(item.timestamp()),
+            Flavor::Files { count } if *count > 1 => {
+                gettext("{n} files").replace("{n}", &count.to_string())
+            }
+            _ => String::new(),
+        };
+        imp.caption.set_visible(!caption.is_empty());
+        imp.caption.set_label(&caption);
+
         let pin_binding = item
             .bind_property("pinned", &*imp.pin_icon, "visible")
             .sync_create()
@@ -130,55 +165,22 @@ impl HistoryRow {
         let handler = item.connect_pinned_notify(glib::clone!(
             #[weak(rename_to = row)]
             self,
-            move |item| row.rebuild_menu(item)
+            move |item| row
+                .imp()
+                .more_button
+                .set_menu_model(Some(&crate::ui::item_menu(item)))
         ));
         imp.pinned_handler.replace(Some(handler));
-        self.rebuild_menu(item);
+        imp.more_button
+            .set_menu_model(Some(&crate::ui::item_menu(item)));
 
-        self.update_property(&[gtk::accessible::Property::Label(&item.preview())]);
-    }
-
-    /// Menu actions name the item by its content key, not its list position:
-    /// rows are not rebound when clips are added or deleted above them.
-    fn rebuild_menu(&self, item: &ClipItem) {
-        let imp = self.imp();
-        let key = item.key().to_variant();
-        let add = |section: &gio::Menu, label: &str, action: &str| {
-            let mi = gio::MenuItem::new(Some(label), None);
-            mi.set_action_and_target_value(Some(action), Some(&key));
-            section.append_item(&mi);
-        };
-        let menu = gio::Menu::new();
-        let section = gio::Menu::new();
-        add(&section, &gettext("Paste"), "win.paste-item");
-        add(&section, &gettext("Copy"), "win.copy-item");
-        add(
-            &section,
-            &if item.pinned() {
-                gettext("Unpin")
-            } else {
-                gettext("Pin")
-            },
-            "win.pin-item",
-        );
-        add(&section, &gettext("Details…"), "win.show-item");
-        menu.append_section(None, &section);
-        let danger = gio::Menu::new();
-        add(&danger, &gettext("Delete"), "win.delete-item");
-        menu.append_section(None, &danger);
-        imp.more_button.set_menu_model(Some(&menu));
-        if let Some(popover) = imp.context_menu.borrow().as_ref() {
-            popover.set_menu_model(Some(&menu));
-        }
-        imp.menu.replace(Some(menu));
-    }
-
-    /// Re-render the relative time ("5 min ago"), which goes stale.
-    pub fn refresh_time(&self) {
-        let imp = self.imp();
-        if let Some(item) = imp.item.borrow().as_ref() {
-            imp.time.set_label(&relative_time(item.timestamp()));
-        }
+        // Rows carry no time (the section header has the day); say it here.
+        let when = crate::ui::short_when(item.timestamp());
+        self.set_tooltip_text((!is_image).then_some(when.as_str()));
+        self.update_property(&[gtk::accessible::Property::Label(&format!(
+            "{}, {when}",
+            item.preview()
+        ))]);
     }
 
     pub fn unbind(&self) {
@@ -189,41 +191,7 @@ impl HistoryRow {
         if let (Some(item), Some(handler)) = (imp.item.take(), imp.pinned_handler.take()) {
             item.disconnect(handler);
         }
-        imp.picture.set_paintable(gtk::gdk::Paintable::NONE);
-        imp.more_button.set_menu_model(None::<&gio::MenuModel>);
-        imp.menu.replace(None);
-    }
-
-    fn show_context_menu(&self, x: f64, y: f64) {
-        let imp = self.imp();
-        let Some(model) = imp.menu.borrow().clone() else {
-            return;
-        };
-        let popover = imp.context_menu.borrow().clone().unwrap_or_else(|| {
-            let p = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
-            p.set_parent(self);
-            p.set_has_arrow(false);
-            imp.context_menu.replace(Some(p.clone()));
-            p
-        });
-        popover.set_menu_model(Some(&model));
-        popover.set_pointing_to(Some(&gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
-        popover.popup();
-    }
-}
-
-pub(crate) fn relative_time(unix: i64) -> String {
-    let now = glib::DateTime::now_local()
-        .map(|d| d.to_unix())
-        .unwrap_or(unix);
-    let secs = (now - unix).max(0);
-    match secs {
-        0..=59 => gettext("Just now"),
-        60..=3599 => gettext("{} min ago").replace("{}", &(secs / 60).to_string()),
-        3600..=86_399 => gettext("{} h ago").replace("{}", &(secs / 3600).to_string()),
-        _ => glib::DateTime::from_unix_local(unix)
-            .and_then(|d| d.format("%x"))
-            .map(|s| s.to_string())
-            .unwrap_or_default(),
+        imp.media_picture.set_paintable(gtk::gdk::Paintable::NONE);
+        imp.more_button.set_menu_model(None::<&gtk::gio::MenuModel>);
     }
 }

@@ -24,18 +24,12 @@ pub enum TrayEvent {
     Quit,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TrayKind {
-    Text,
-    Image,
-    Files,
-}
-
 /// A snapshot of one history entry, safe to hand to the tray thread.
 #[derive(Debug, Clone)]
 pub struct TrayItem {
     pub hash: [u8; 32],
-    pub kind: TrayKind,
+    /// Symbolic icon for the clip's type; empty for plain text.
+    pub icon_name: String,
     pub label: String,
     pub pinned: bool,
     /// Small PNG for image entries.
@@ -118,12 +112,10 @@ impl Tray for ClipperinoTray {
         };
         let clip = |item: &TrayItem| -> MenuItem<Self> {
             let hash = item.hash;
-            let icon_name = match (item.icon_png.is_some(), item.kind, item.pinned) {
-                (true, _, _) => String::new(),
-                (false, _, true) => "view-pin-symbolic".into(),
-                (false, TrayKind::Files, false) => "folder-symbolic".into(),
-                (false, TrayKind::Image, false) => "image-x-generic-symbolic".into(),
-                (false, TrayKind::Text, false) => String::new(),
+            let icon_name = match (item.icon_png.is_some(), item.pinned) {
+                (true, _) => String::new(),
+                (false, true) => "view-pin-symbolic".into(),
+                (false, false) => item.icon_name.clone(),
             };
             StandardItem {
                 label: item.label.clone(),

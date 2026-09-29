@@ -37,6 +37,12 @@
     <display_length compare="ge">360</display_length>
   </requires>
   <releases>
+    <release version="1.3.0" date="2026-09-29">
+      <description>
+        <p>Images are easier to find and recognise: an Images filter shows them as a gallery, and in the full list each image is a large card instead of a small thumbnail. The preview pane and details view show the full-size image, and transparent images sit on a checkerboard.</p>
+        <p>The history is grouped into Today, Yesterday, Last 7 Days and Earlier. Links, email addresses, code and colour codes get their own icons, colour codes show a swatch, and the status icon menu tells images apart by the time they were copied.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-09-29">
       <description>
         <p>Pause recording, and optionally delete unpinned clips after a day, a week, 30 or 90 days. Copied files paste as files again, search finds text anywhere in a clip, and the same image copied from two apps is kept once. The status icon menu shows your actual shortcut and a Pause Recording toggle.</p>

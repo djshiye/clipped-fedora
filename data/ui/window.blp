@@ -18,6 +18,14 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
   }
 
   Adw.Breakpoint {
+    condition ("min-width: 560sp and max-width: 699sp")
+    setters {
+      gallery.min-columns: 3;
+      gallery.max-columns: 3;
+    }
+  }
+
+  Adw.Breakpoint {
     condition ("min-width: 700sp")
     setters {
       preview_pane.visible: true;
@@ -69,7 +77,38 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
             margin-start: 12;
             margin-end: 12;
             margin-top: 4;
-            margin-bottom: 10;
+            margin-bottom: 8;
+          }
+
+          // Show one kind of clip; Images switches to a gallery.
+          Adw.ToggleGroup kind_chips {
+            halign: center;
+            homogeneous: true;
+            margin-start: 12;
+            margin-end: 12;
+            margin-bottom: 8;
+            active-name: "all";
+            styles ["round", "chips"]
+
+            Adw.Toggle {
+              name: "all";
+              label: _("All");
+            }
+
+            Adw.Toggle {
+              name: "text";
+              label: _("Text");
+            }
+
+            Adw.Toggle {
+              name: "images";
+              label: _("Images");
+            }
+
+            Adw.Toggle {
+              name: "files";
+              label: _("Files");
+            }
           }
 
           Stack history_stack {
@@ -90,7 +129,7 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
             StackPage {
               name: "no-results";
 
-              child: Adw.StatusPage {
+              child: Adw.StatusPage no_results_page {
                 icon-name: "system-search-symbolic";
                 title: _("No Results");
               };
@@ -121,6 +160,21 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
                 child: ListView history_list {
                   single-click-activate: true;
                   styles ["clip-list"]
+                };
+              };
+            }
+
+            StackPage {
+              name: "gallery";
+
+              child: ScrolledWindow {
+                hscrollbar-policy: never;
+
+                child: GridView gallery {
+                  min-columns: 2;
+                  max-columns: 2;
+                  single-click-activate: true;
+                  styles ["clip-gallery"]
                 };
               };
             }
@@ -182,7 +236,7 @@ template $ClipperinoWindow : Adw.ApplicationWindow {
                 name: "image";
 
                 child: Picture preview_picture {
-                  content-fit: contain;
+                  content-fit: scale_down;
                   can-shrink: true;
                   hexpand: true;
                   vexpand: true;

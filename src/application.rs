@@ -472,14 +472,25 @@ impl ClipperinoApplication {
                 } else {
                     None
                 };
+                let flavor = crate::model::Flavor::of(item.kind(), item.text().as_deref());
+                // Images all read "Image · W × H"; the time tells them apart.
+                // Absolute, because the menu is not refreshed as time passes.
+                let label = if item.kind() == ClipKind::Image {
+                    format!(
+                        "{} · {}",
+                        item.preview(),
+                        crate::ui::short_when(item.timestamp())
+                    )
+                } else {
+                    item.preview()
+                };
                 tray::TrayItem {
                     hash,
-                    kind: match item.kind() {
-                        ClipKind::Image => tray::TrayKind::Image,
-                        ClipKind::Files => tray::TrayKind::Files,
-                        ClipKind::Text => tray::TrayKind::Text,
+                    icon_name: match flavor {
+                        crate::model::Flavor::Plain => String::new(),
+                        f => f.icon_name().to_owned(),
                     },
-                    label: tray::menu_label(&item.preview()),
+                    label: tray::menu_label(&label),
                     pinned: item.pinned(),
                     icon_png,
                 }

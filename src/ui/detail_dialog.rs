@@ -58,18 +58,28 @@ impl DetailDialog {
         let imp = dialog.imp();
         match item.kind() {
             ClipKind::Image => {
-                let texture = item
-                    .image_path()
-                    .and_then(|p| gtk::gdk::Texture::from_filename(p).ok())
-                    .or_else(|| item.thumbnail());
-                if let Some(t) = &texture {
-                    imp.meta_label.set_label(
-                        &gettext("{w} × {h} px")
-                            .replace("{w}", &t.width().to_string())
-                            .replace("{h}", &t.height().to_string()),
-                    );
+                // Thumbnail first, then the full image decoded off the main
+                // thread (large screenshots would otherwise stall the open).
+                imp.picture.set_paintable(item.thumbnail().as_ref());
+                if let Some(path) = item.image_path() {
+                    if let Some((_, w, h)) = gtk::gdk_pixbuf::Pixbuf::file_info(&path) {
+                        imp.meta_label.set_label(
+                            &gettext("{w} × {h} px")
+                                .replace("{w}", &w.to_string())
+                                .replace("{h}", &h.to_string()),
+                        );
+                    }
+                    let picture = imp.picture.downgrade();
+                    glib::spawn_future_local(async move {
+                        let loaded = gtk::gio::spawn_blocking(move || {
+                            crate::model::images::preview_from_file(&path)
+                        })
+                        .await;
+                        if let (Some(picture), Ok(Ok(texture))) = (picture.upgrade(), loaded) {
+                            picture.set_paintable(Some(&texture));
+                        }
+                    });
                 }
-                imp.picture.set_paintable(texture.as_ref());
                 imp.stack.set_visible_child_name("image");
             }
             _ => {

@@ -38,7 +38,9 @@ shell extension, or on the app having focus.
 
 ## Features
 
-- **History** of text, file lists and images, persisted across restarts. Copied files paste back as files in Nautilus.
+- **History** of text, file lists and images, persisted across restarts, grouped by day (Today, Yesterday, Last 7 Days, Earlier). Copied files paste back as files in Nautilus.
+- **Images at a glance**: image clips are large preview cards; the **Images** filter shows them as a gallery; transparent images sit on a checkerboard; hover for a bigger view. Links, email addresses, code and colour codes get their own icons (colour codes show a swatch).
+- **Filters**: All, Text, Images, Files (`Alt+1`–`Alt+4`).
 - **Global shortcut** `Super+Shift+V` (`Super+V` is taken by GNOME's notification list). Change it in Settings › Keyboard.
 - **Keyboard-first**: type to filter (search covers the full text of each clip), `↑`/`↓` to move, `Enter` to paste, `Ctrl+1`–`Ctrl+9` for the first nine, `Delete` to remove (with Undo), `Ctrl+P` to pin, `Ctrl+D` for details, `Escape` to close, `Ctrl+?` for the full list.
 - **Paste on select**: the item is pasted straight into the app you came from. Turn it off in Preferences to copy-and-close instead.
@@ -118,9 +120,9 @@ the portals identify apps by their desktop entry.
 ### Build the RPM
 
 ```bash
-cargo vendor vendor && tar -cJf clipperino-1.2.0-vendor.tar.xz vendor
-# source tarball named clipperino-1.2.0.tar.gz with a clipperino-1.2.0/ prefix
-rpmdev-setuptree && cp clipperino-1.2.0*.tar.* ~/rpmbuild/SOURCES/
+cargo vendor vendor && tar -cJf clipperino-1.3.0-vendor.tar.xz vendor
+# source tarball named clipperino-1.3.0.tar.gz with a clipperino-1.3.0/ prefix
+rpmdev-setuptree && cp clipperino-1.3.0*.tar.* ~/rpmbuild/SOURCES/
 rpmbuild -ba build-aux/clipperino.spec
 ```
 

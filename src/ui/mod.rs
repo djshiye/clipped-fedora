@@ -1,24 +1,15 @@
 mod detail_dialog;
 mod glyph_page;
 mod history_row;
+mod image_tile;
+mod item_menu;
+mod time;
 
 pub use detail_dialog::DetailDialog;
 pub use glyph_page::GlyphPage;
 pub use history_row::HistoryRow;
-pub(crate) use history_row::relative_time;
+pub use image_tile::ImageTile;
+pub use item_menu::{attach_context_menu, attach_image_tooltip, item_menu};
+pub(crate) use time::{Section, relative_time, short_when, today_start};
 
-/// Cheap heuristic for showing text in a monospace font.
-pub fn looks_like_code(text: &str) -> bool {
-    let sample: String = text.chars().take(2000).collect();
-    let braces = sample.matches(['{', '}', ';']).count();
-    let indented = sample
-        .lines()
-        .filter(|l| l.starts_with("    ") || l.starts_with('\t'))
-        .count();
-    let tags = sample.matches("</").count();
-    sample.starts_with("#!")
-        || sample.starts_with("$ ")
-        || braces >= 3
-        || tags >= 2
-        || (indented >= 2 && sample.lines().count() >= 3)
-}
+pub use crate::model::looks_like_code;

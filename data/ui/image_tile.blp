@@ -1,0 +1,58 @@
+using Gtk 4.0;
+
+// One image in the Images gallery: a cropped preview with its size and time.
+template $ClipperinoImageTile : Box {
+  orientation: vertical;
+  spacing: 6;
+  margin-start: 4;
+  margin-end: 4;
+  margin-top: 4;
+  margin-bottom: 6;
+
+  Overlay media {
+    overflow: hidden;
+    styles ["clip-media"]
+
+    // Sets the tile's size; the picture overlay never stretches it.
+    child: Box {
+      height-request: 112;
+      hexpand: true;
+    };
+
+    [overlay]
+    Picture picture {
+      content-fit: cover;
+      can-shrink: true;
+    }
+
+    [overlay]
+    Image pin_icon {
+      icon-name: "view-pin-symbolic";
+      visible: false;
+      halign: end;
+      valign: start;
+      margin-top: 6;
+      margin-end: 6;
+      styles ["tile-pin"]
+    }
+  }
+
+  Box {
+    orientation: horizontal;
+    spacing: 6;
+    margin-start: 2;
+    margin-end: 2;
+
+    Label size {
+      xalign: 0;
+      hexpand: true;
+      ellipsize: end;
+      styles ["caption"]
+    }
+
+    Label when {
+      xalign: 1;
+      styles ["caption", "dim-label"]
+    }
+  }
+}

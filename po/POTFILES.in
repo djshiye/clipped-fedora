@@ -3,6 +3,7 @@ data/io.github.djshiye.Clipperino.metainfo.xml.in
 data/io.github.djshiye.Clipperino.gschema.xml
 data/ui/window.blp
 data/ui/history_row.blp
+data/ui/image_tile.blp
 data/ui/glyph_page.blp
 data/ui/preferences.blp
 src/application.rs
@@ -14,4 +15,7 @@ src/preferences.rs
 src/ui/detail_dialog.rs
 src/ui/glyph_page.rs
 src/ui/history_row.rs
+src/ui/image_tile.rs
+src/ui/item_menu.rs
+src/ui/time.rs
 src/window.rs

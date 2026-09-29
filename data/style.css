@@ -68,9 +68,63 @@ listview.clip-list > row:selected menubutton,
 listview.clip-list > row:focus-within menubutton {
   opacity: 1;
 }
-.clip-thumbnail {
+/* image preview in a card or gallery tile: rounded, hairline edge so light
+   screenshots don't melt into a light card */
+.clip-media {
   border-radius: 10px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--view-fg-color) 10%, transparent);
+  background: color-mix(in srgb, var(--view-fg-color) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--view-fg-color) 10%, transparent);
+}
+.clip-media > picture {
+  border-radius: 10px;
+}
+.clip-swatch {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--view-fg-color) 14%, transparent);
+}
+/* day and Pinned headers between rows */
+listview.clip-list > header {
+  padding: 10px 6px 6px 6px;
+  background: none;
+}
+.clip-section {
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--view-fg-color) 55%, transparent);
+}
+/* ── Images gallery ───────────────────────────────────────────────────── */
+gridview.clip-gallery {
+  background: transparent;
+  padding: 2px 8px 12px 8px;
+}
+gridview.clip-gallery > child {
+  border-radius: 14px;
+  margin: 4px;
+  padding: 6px 6px 2px 6px;
+  background: var(--card-bg-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 10%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--view-fg-color) 6%, transparent);
+  transition: background 150ms ease-out, box-shadow 150ms ease-out;
+}
+gridview.clip-gallery > child:hover {
+  background: color-mix(in srgb, var(--card-bg-color) 94%, var(--view-fg-color));
+}
+gridview.clip-gallery > child:selected {
+  background: color-mix(in srgb, var(--accent-bg-color) 14%, var(--card-bg-color));
+  box-shadow: 0 1px 2px color-mix(in srgb, black 10%, transparent),
+              0 0 0 1.5px color-mix(in srgb, var(--accent-bg-color) 60%, transparent);
+}
+gridview.clip-gallery > child:selected label {
+  color: var(--view-fg-color);
+}
+.tile-pin {
+  padding: 4px;
+  border-radius: 999px;
+  color: var(--accent-fg-color);
+  background: var(--accent-bg-color);
 }
 .clip-kind-icon {
   min-width: 32px;

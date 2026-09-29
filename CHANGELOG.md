@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.3.0 (2026-09-29)
+
+### Images
+
+- **Filter chips** under the search field: All, Text, Images, Files
+  (`Alt+1`–`Alt+4`). **Images** shows a gallery of large, uniform tiles with
+  each image's size and the time it was copied; arrow keys move through it.
+- In the full list, image clips are **media cards** with a wide preview
+  instead of a small thumbnail, so rows line up and images are recognisable.
+- The preview pane and details view load the **full-size image** instead of
+  stretching the thumbnail, and small images are no longer upscaled.
+- **Transparent images** sit on a checkerboard, so a dark logo stays visible
+  in dark mode.
+- **Hover** over an image to see it larger without opening Details.
+- The status icon menu adds the time to image entries
+  ("Image · 1920 × 1080 · 14:32"), so they can be told apart.
+
+### Everything else
+
+- History is grouped under **Today, Yesterday, Last 7 Days and Earlier**
+  headers. Text rows show their time on hover; image cards show it below
+  the picture.
+- **Type icons**: links show a link icon and their domain, email addresses
+  a mail icon, code a terminal icon, and colour codes such as `#3584e4` a
+  swatch of the colour. The status icon menu uses the same icons.
+- The window opens on the newest clip, scrolled to the top.
+
 ## 1.2.0 (2026-09-29)
 
 ### New
